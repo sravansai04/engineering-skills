@@ -1,0 +1,15 @@
+.site-footer {
+  padding: 48px 24px;
+  background: #111827;
+  color: #e5e7eb;
+  font-size: 14px;
+}
+
+.site-footer a {
+  color: #93c5fd;
+}
+
+.site-footer__legal {
+  margin-top: 18px;
+  color: #6b7280;
+}

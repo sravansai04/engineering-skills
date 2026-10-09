@@ -1,0 +1,83 @@
+{
+  "skill_name": "ci-failure-triage",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "CI went red on my PR again. The log just says 'Process completed with exit code 1' and there are like 200 errors. I saved the failed-step log to evals/files/cascade-run.log and the workflow is evals/files/ci.yml. What broke and how do I fix it?",
+      "expected_output": "A triage report that identifies the first real error (Connection refused to Postgres at 127.0.0.1:5432 from the session-scoped db_engine fixture in tests/conftest.py:23) and says the 212 errors are one cascade, not 212 bugs. It classifies the failure as a setup race / flaky infrastructure-in-the-workflow (the postgres service has no health check, so tests can start before the DB accepts connections), and proposes adding a service health check and/or a wait-for-ready, not editing tests or retrying.",
+      "files": [
+        "evals/files/cascade-run.log",
+        "evals/files/ci.yml"
+      ],
+      "expectations": [
+        "Names the Connection refused error from tests/conftest.py:23 (db_engine fixture) as the first real error",
+        "States that all 212 errors share one cause rather than treating them individually",
+        "Does not blame the 'Process completed with exit code 1' line or the DeprecationWarning",
+        "Points out that the postgres service in ci.yml has no health check or readiness wait",
+        "Proposes a fix in the workflow/setup (health check or wait-for-ready) rather than retrying, skipping, or editing the 212 tests",
+        "Uses the triage report structure (first real error, class, caused by this change, fix, verification)"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "test_export_csv fails on CI maybe 1 in 10 runs and it's blocking my merge. It always passes on my laptop. Can you just add a retry decorator or skip it so I can get this in today?",
+      "expected_output": "Does not blindly add a retry or skip. Checks whether the PR touches code that test covers, gathers failure history, tries to reproduce under CI-like conditions (repeat loop, random order with seed, CI parallelism, TZ, constrained CPU), and fixes the nondeterminism if found. If a fix can't land promptly and the test does not cover the PR's changes, quarantines only that test with the framework's skip mechanism, with an issue link in the reason, after opening a tracking issue with an owner and review date. Never enables suite-wide retries.",
+      "files": [],
+      "expectations": [
+        "Does not add a blanket retry decorator or suite-wide retry as the fix",
+        "Checks whether the current change touches the code the flaky test covers before considering quarantine",
+        "Proposes a concrete way to reproduce the flake (repeat loop and/or random order with a seed and/or CI parallelism/TZ/CPU constraint)",
+        "If quarantine is proposed, it requires a tracking issue with a named owner and a review date, and the skip reason links the issue",
+        "Explains briefly why retrying or skipping without tracking is harmful"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "My PR's 'unit-tests' check is failing on GitHub but `make test` passes locally on my branch. main is green. PR #482. Figure out what's going on.",
+      "expected_output": "Uses gh to inspect the PR checks and the failed run logs, finds the first real error, checks main's recent runs, and recognizes that pull_request CI runs on a merge of the branch into the base: it reproduces on a local merge of origin/main into the branch (or explains how), re-runs failed jobs at most once to test flakiness while noting that a re-run reuses the original SHA, and reads the CI config to run the exact CI command rather than assuming `make test` is equivalent. Ends with a triage report and a false-green check plan.",
+      "files": [],
+      "expectations": [
+        "Runs or proposes real gh commands such as `gh pr checks 482` and `gh run view <id> --log-failed`",
+        "Checks the default branch's recent runs for the same failure",
+        "Mentions that PR CI tests the merge commit and proposes reproducing on a local merge of origin/main",
+        "Reads the CI config to find the exact command CI runs instead of assuming `make test` matches",
+        "Limits re-runs to one as a flakiness test and notes a re-run reuses the original commit",
+        "Includes verification that required checks pass on the latest head SHA"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "The CI run on my PR shows cancelled, not failed. Lint and unit passed, integration got cancelled. I didn't cancel anything. I dumped `gh run view --json` plus the end of the integration log into evals/files/timeout-run.json, and the workflow is evals/files/integration.yml. The last green integration run took about 12 minutes. Can I just ignore the cancel and re-run until it's green?",
+      "expected_output": "Does not dismiss the cancelled job as collateral. Notices that the integration job ran from 09:12:06 to 09:57:09 (about 45 minutes), which matches its timeout-minutes: 45, so it timed out, which GitHub Actions reports as cancelled. Rules out the other cancel causes (only one job was cancelled, so not fail-fast; no evidence of a newer push for the concurrency group; the user didn't cancel). Classifies it as a resource limit, specifically a hang, given the last green run took ~12 minutes. Points at test_export_with_retry_queue as the test that started and never finished. Proposes making the hang fail fast with a stack (per-test timeout or thread dump) and finding what it waits on, and does not propose raising the timeout or repeated re-runs.",
+      "files": [
+        "evals/files/timeout-run.json",
+        "evals/files/integration.yml"
+      ],
+      "expectations": [
+        "Treats the cancelled integration job as the failure rather than collateral damage",
+        "Compares the job duration (about 45 minutes) with timeout-minutes: 45 and concludes it timed out",
+        "Explains or acknowledges that GitHub Actions reports a job timeout as cancelled",
+        "Considers and rules out other cancel causes (fail-fast, concurrency cancel-in-progress, manual cancel) with evidence",
+        "Identifies test_export_with_retry_queue as the test that was running when the job hung",
+        "Proposes diagnosing the hang (per-test timeout, thread or stack dump, or comparing with the 12-minute green run) instead of raising the timeout or re-running until green"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "PR #512 is all green (see evals/files/pr-512-checks.txt) but GitHub still won't let me merge. The branch's required checks are in evals/files/required-checks.json and my only workflow change is evals/files/e2e-matrix.diff. GitHub is glitching, right? Just confirm CI passed so an admin can force-merge it.",
+      "expected_output": "Does not confirm CI passed. Flags a false green: the ruleset requires 'e2e (3.11)', but the PR changed the e2e matrix to 3.12, so the job now reports as 'e2e (3.12)' and the required 'e2e (3.11)' check never reports and waits forever. Explains that pushing more commits or re-running will not clear it. Proposes updating the required-check list in the same change (needs an admin, and the user's go-ahead), or keeping names stable with an aggregate job as the only required check. Advises against force-merging past a required check that never ran, because the e2e suite under the required configuration was never verified.",
+      "files": [
+        "evals/files/pr-512-checks.txt",
+        "evals/files/required-checks.json",
+        "evals/files/e2e-matrix.diff"
+      ],
+      "expectations": [
+        "Does not report the PR as verified green or endorse a force-merge as-is",
+        "Names the mismatch: required 'e2e (3.11)' versus reported 'e2e (3.12)', caused by the matrix change",
+        "States that the old required check will never report, so re-running or pushing again won't unblock it",
+        "Proposes updating the required-check list in the same change, or a stable aggregate required job",
+        "Treats changing branch protection or rulesets as an action that needs an admin and the user's go-ahead"
+      ]
+    }
+  ]
+}

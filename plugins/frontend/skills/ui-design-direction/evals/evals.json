@@ -1,0 +1,80 @@
+{
+  "skill_name": "ui-design-direction",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Add a 'Danger zone' section at the bottom of our workspace settings page with a 'Delete workspace' button. It should look like it belongs with the rest of the app. The app is in evals/files/settings-app (the page is src/pages/SettingsPage.tsx).",
+      "expected_output": "Measures the repo before designing: src/styles/tokens.css is a token source and component code makes dozens of var(--...) references against one literal (max-width: 48rem in SettingsPage.css), so the mode is conform. Writes no direction document and no new palette. Reuses the Card component and the existing --color-danger-* semantic tokens, adding a danger variant to Button.css built only from tokens, with hover limited to hover-capable devices, an outline-based focus-visible ring, and a disabled state, and keeps the destructive action visually distinct from the primary indigo button. Scans the changed files for hard-coded values and reports zero new hits (the max-width literal is pre-existing). Checks the new color pairs with token-contrast.mjs (white text on --color-danger-solid is 4.83:1, on the hover step 6.47:1) for the only theme the app defines (light). Reports Mode: conform with evidence, and says screenshots were not captured if no browser could run.",
+      "files": [
+        "evals/files/settings-app/package.json",
+        "evals/files/settings-app/src/styles/tokens.css",
+        "evals/files/settings-app/src/components/Card.tsx",
+        "evals/files/settings-app/src/components/Card.css",
+        "evals/files/settings-app/src/components/Button.tsx",
+        "evals/files/settings-app/src/components/Button.css",
+        "evals/files/settings-app/src/pages/SettingsPage.tsx",
+        "evals/files/settings-app/src/pages/SettingsPage.css"
+      ],
+      "expectations": [
+        "Identifies conform mode from evidence: names src/styles/tokens.css as the token source and cites token references outnumbering literal hits, and does not write a direction document or a new palette",
+        "Reuses the existing Card component and the existing --color-danger-* tokens; the change introduces no new hex, rgb(), or named color values and no new red primitives",
+        "Adds the danger style as a variant of the existing Button with token-only hover, focus-visible (outline-based), and disabled states",
+        "Runs or specifies scan-hardcoded.mjs on the changed files and reports zero new hits, treating max-width: 48rem as pre-existing rather than new",
+        "Checks the new danger color pairs (for example --color-text-on-danger on --color-danger-solid and on its hover step) with token-contrast.mjs and reports that they pass",
+        "The final report states Mode: conform and says which verification did not run (for example screenshots when no browser was available)"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "We're starting a new internal on-call console for our SRE team: an incident list, a service health grid, and who is on pager this week. React with plain CSS, no design system yet, and it needs a dark mode because people use it at 3am. Set up the visual direction and the base tokens before we build any screens.",
+      "expected_output": "Treats this as author mode and fills the direction template: a context dial for an all-day operations tool (high density, low expressiveness, color reserved for status and selection, feedback-only motion), a one-sentence concept rooted in the night-time on-call job, a named signature decision (for example incident severity or time-since-page carrying the type and color budget), a swap test with a Default vs this direction table, and a decisions table per axis. Writes a token file before any component: primitives, semantic roles, and a dark theme that remaps semantics only, with incident severity colors kept separate from the accent. Creates a contrast pairs file with light and dark groups that includes status text on status backgrounds and the focus ring next to the accent, runs token-contrast.mjs, and fixes or flags failures. Records assumptions such as brand colors and the smallest viewport instead of inventing them, and does not describe how screens look since none were rendered.",
+      "files": [],
+      "expectations": [
+        "Classifies the work as author mode and writes a direction document with a context dial suited to a dense, all-day operations tool, a one-sentence concept, and a named signature decision",
+        "Includes a swap test or a Default vs this direction comparison that gives a reason wherever the default and the chosen direction agree",
+        "Writes tokens before any component code: primitives plus purpose-named semantic roles, with a dark theme that remaps semantic tokens only (no inversion, no per-component dark overrides)",
+        "Defines incident severity or status colors as their own semantic group, separate from the interactive accent",
+        "Creates a contrast pairs file with light and dark groups, including status text on status backgrounds and the focus ring against the accent, and reports the token-contrast.mjs result",
+        "States its assumptions (for example brand colors, fonts, smallest viewport) and does not claim how the UI looks without screenshots"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Our marketing site's CSS in evals/files/marketing-site/src has hex colors and pixel values everywhere, and I think there are at least three slightly different blues. Pull it into design tokens without changing how the site looks.",
+      "expected_output": "Measures first: zero var() references and dozens of literal hits, an established look with no token source, so the mode is consolidate. Runs scan-hardcoded.mjs --inventory and reports the merge candidates: #2463eb and #2564ea into #2563eb (7 uses together), #6b7281 into #6b7280, with #1d4ed8 kept as the distinct hover or pressed role. Lists off-grid lengths (13px, 18px, 22px, 15px, 14px, 10px, 6px) with their nearest steps and either keeps the exact values or calls each change a deliberate visual change, since the user asked for no visible difference; treats 999px as a full or pill radius. Writes a token file with role-based names, migrates the four stylesheets to var() references, recommends or captures visual baselines before and compares after, re-runs the scan, and reports what remains.",
+      "files": [
+        "evals/files/marketing-site/package.json",
+        "evals/files/marketing-site/src/styles/header.css",
+        "evals/files/marketing-site/src/styles/buttons.css",
+        "evals/files/marketing-site/src/styles/pricing.css",
+        "evals/files/marketing-site/src/styles/footer.css"
+      ],
+      "expectations": [
+        "Classifies the work as consolidate mode and runs scan-hardcoded.mjs --inventory (or an equivalent frequency inventory) before writing tokens",
+        "Merges #2463eb and #2564ea into #2563eb (and #6b7281 into #6b7280) while keeping #1d4ed8 as a separate hover or pressed role",
+        "Handles off-grid lengths such as 13px, 18px, and 22px explicitly: either preserves them or lists each move to a scale step as a deliberate visual change",
+        "Names tokens by purpose (for example color-accent-rest, color-text-secondary), not by appearance (blue-1, gray-text)",
+        "Recommends or captures before-and-after visual baselines to prove the look did not change, or states that this check is still owed",
+        "Re-runs the hard-coded scan after migrating and reports the remaining literal count"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Users keep asking for dark mode in the app in evals/files/settings-app. Add a dark theme that follows the OS setting for now; we'll add a toggle later.",
+      "expected_output": "Stays in conform mode: extends src/styles/tokens.css in its own format rather than starting a new system. Adds a dark mapping of the semantic roles under @media (prefers-color-scheme: dark), ideally structured so a later [data-theme] toggle can reuse it, and sets color-scheme so native controls and scrollbars match. Surfaces rise in lightness with elevation, the accent and danger steps move lighter to keep contrast, and nothing is inverted. Components need no changes because they already use semantic tokens; any component that would need a dark override is treated as a missing semantic token. Adds a dark group to a contrast pairs file (using $media for the prefers-color-scheme block) and reports token-contrast.mjs results that cover text, the focus ring, and the danger pairs. Lists screenshots in light and dark, and forced-colors focus visibility, as checks run or still owed.",
+      "files": [
+        "evals/files/settings-app/src/styles/tokens.css",
+        "evals/files/settings-app/src/components/Card.css",
+        "evals/files/settings-app/src/components/Button.css",
+        "evals/files/settings-app/src/pages/SettingsPage.css"
+      ],
+      "expectations": [
+        "Adds the dark theme by remapping semantic tokens in src/styles/tokens.css (for example under @media (prefers-color-scheme: dark)) and adds no per-component dark overrides",
+        "Sets color-scheme for the dark theme so native controls and scrollbars match",
+        "Builds dark values as a deliberate mapping (lighter surfaces for higher elevation, lighter accent and danger steps) rather than inverting colors or using filter: invert",
+        "Adds a dark group to the contrast pairs (using $media or a theme selector) and reports token-contrast.mjs results for text, focus ring, and danger pairs",
+        "Reports screenshots in light and dark (or says they were not captured) and lists forced-colors or no-flash checks as done or still owed"
+      ]
+    }
+  ]
+}

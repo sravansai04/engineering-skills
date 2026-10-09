@@ -1,0 +1,75 @@
+name: Skill request
+description: Propose a new skill for a task the current skills do not cover.
+title: "[Skill request]: "
+labels: ["type:skill-request", "status:needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A good skill makes Claude visibly better at a recurring engineering task than it already is without help. Concrete prompts and a clear gap make a request easy to accept. For open-ended ideas, start a thread in the Discussions **Ideas** category instead.
+
+        > [!WARNING]
+        > Issues are public. Remove secrets, private hostnames, customer data and proprietary code from the example prompts before you submit.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What task do you keep doing, and what goes wrong or takes too long when Claude does it today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: example-prompts
+    attributes:
+      label: Example prompts
+      description: Three to five things people would actually type that should load this skill.
+      placeholder: |
+        - why does this test only fail in CI?
+        - make this flaky test deterministic
+        - this passes locally but times out on the runner
+    validations:
+      required: true
+
+  - type: textarea
+    id: near-misses
+    attributes:
+      label: Prompts that should not load it
+      description: Optional. Similar requests that belong to another skill. These become the negative trigger evals.
+
+  - type: textarea
+    id: gap
+    attributes:
+      label: Why the existing skills do not cover it
+      description: Name the closest existing skills (as `plugin:skill`) and what each one misses.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: plugin
+    attributes:
+      label: Proposed plugin
+      options:
+        - implementation
+        - review-suite
+        - data-api
+        - workflow
+        - frontend
+        - skill-dev
+        - a new plugin
+        - not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: contribute
+    attributes:
+      label: Would you like to build it?
+      description: CONTRIBUTING.md describes the layout, evals and review bar a new skill needs.
+      options:
+        - Yes, I would like to open the pull request
+        - Yes, with some guidance
+        - No, but I can test a draft
+        - "No"
+    validations:
+      required: true

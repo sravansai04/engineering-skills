@@ -1,0 +1,55 @@
+{
+  "headSha": "b7c41e09d2a35f8e61c0a9d4e2f7b3c18a6d5e20",
+  "attempt": 1,
+  "status": "completed",
+  "conclusion": "cancelled",
+  "jobs": [
+    {
+      "name": "lint",
+      "databaseId": 51830011,
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-10-06T09:12:04Z",
+      "completedAt": "2026-10-06T09:13:41Z",
+      "steps": [
+        {"number": 1, "name": "Set up job", "status": "completed", "conclusion": "success"},
+        {"number": 2, "name": "Run lint", "status": "completed", "conclusion": "success"}
+      ]
+    },
+    {
+      "name": "unit",
+      "databaseId": 51830012,
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-10-06T09:12:05Z",
+      "completedAt": "2026-10-06T09:19:52Z",
+      "steps": [
+        {"number": 1, "name": "Set up job", "status": "completed", "conclusion": "success"},
+        {"number": 2, "name": "Run unit tests", "status": "completed", "conclusion": "success"}
+      ]
+    },
+    {
+      "name": "integration",
+      "databaseId": 51830013,
+      "status": "completed",
+      "conclusion": "cancelled",
+      "startedAt": "2026-10-06T09:12:06Z",
+      "completedAt": "2026-10-06T09:57:09Z",
+      "steps": [
+        {"number": 1, "name": "Set up job", "status": "completed", "conclusion": "success"},
+        {"number": 2, "name": "Initialize containers", "status": "completed", "conclusion": "success"},
+        {"number": 3, "name": "Install dependencies", "status": "completed", "conclusion": "success"},
+        {"number": 4, "name": "Run integration tests", "status": "completed", "conclusion": "cancelled"},
+        {"number": 5, "name": "Upload test report", "status": "completed", "conclusion": "skipped"}
+      ]
+    }
+  ],
+  "_runSummaryAnnotations": [
+    {"job": "integration", "level": "failure", "message": "The operation was canceled."}
+  ],
+  "_integrationJobLogTail": [
+    "2026-10-06T09:14:31.0042Z tests/integration/test_export.py::test_export_small PASSED",
+    "2026-10-06T09:14:33.8120Z tests/integration/test_export.py::test_export_with_retry_queue",
+    "2026-10-06T09:57:01.4410Z ##[error]The operation was canceled."
+  ]
+}

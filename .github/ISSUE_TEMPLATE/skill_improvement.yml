@@ -1,0 +1,101 @@
+name: Skill improvement
+description: An existing skill has outdated guidance, triggers on the wrong requests, or misses a case.
+title: "[Skill improvement]: "
+labels: ["type:skill-improvement", "status:needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Evidence is what turns an improvement into a change: the prompt, what the skill did, and a source that shows what it should do.
+
+        > [!WARNING]
+        > Issues are public. Remove secrets, private hostnames and proprietary code before you paste anything.
+
+  - type: dropdown
+    id: skill
+    attributes:
+      label: Skill
+      description: Skills are listed as `plugin:skill`. Pick `other` if yours is not listed and name it in the next field.
+      options:
+        - "implementation:brainstorm-spec"
+        - "implementation:build-feature"
+        - "implementation:debug-root-cause"
+        - "implementation:docs-lookup"
+        - "implementation:execute-plan"
+        - "implementation:plan-feature"
+        - "implementation:refactor-safely"
+        - "implementation:simplify-code"
+        - "implementation:tdd"
+        - "implementation:verify-before-done"
+        - "review-suite:parallel-review"
+        - "review-suite:performance-review"
+        - "review-suite:pr-review"
+        - "review-suite:secure-code-review"
+        - "data-api:api-design"
+        - "data-api:db-migration-safety"
+        - "data-api:query-review"
+        - "workflow:adr-writer"
+        - "workflow:ci-failure-triage"
+        - "workflow:commit-message"
+        - "workflow:git-worktrees"
+        - "workflow:incident-postmortem"
+        - "workflow:pr-description"
+        - "workflow:respond-to-review"
+        - "frontend:accessibility-review"
+        - "frontend:browser-testing"
+        - "frontend:ui-design-direction"
+        - "skill-dev:create-skill"
+        - "other"
+    validations:
+      required: true
+
+  - type: input
+    id: other-skill
+    attributes:
+      label: Other skill
+      description: Only if you picked `other` above. Name the skill and the plugin or collection it came from.
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Type of improvement
+      options:
+        - Wrong or outdated guidance
+        - Did not trigger when it should have
+        - Triggered when it should not have
+        - Missing coverage
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What should change
+      description: What the skill does now and what it should do instead. For trigger problems, say which skill should have handled the request.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: The prompt you used, what happened, and a link to current documentation, a changelog or a reproduction that supports the change.
+    validations:
+      required: true
+
+  - type: input
+    id: versions
+    attributes:
+      label: Claude Code and plugin versions
+      description: From `claude --version` and `claude plugin list`.
+      placeholder: "Claude Code 2.1.295, plugin 1.0.0"
+
+  - type: dropdown
+    id: contribute
+    attributes:
+      label: Would you like to make the change?
+      options:
+        - Yes, I would like to open the pull request
+        - Yes, with some guidance
+        - "No"

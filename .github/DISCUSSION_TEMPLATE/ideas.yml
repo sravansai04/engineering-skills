@@ -1,0 +1,52 @@
+# Form for the Discussions category "Ideas".
+#
+# GitHub matches a discussion form to a category by file name: this file must be named after
+# the category's slug. "Ideas" (slug `ideas`) and "Show and tell" (slug `show-and-tell`) are
+# among the categories GitHub creates when Discussions is turned on. If a category is renamed,
+# deleted or re-created with a different slug, rename the file to match, or GitHub silently
+# falls back to a blank post. Discussion forms support only `title`, `labels` and `body`.
+title: "[Idea]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ideas are for open-ended proposals: a direction for a plugin, a change to how the skills work together, or something you are not sure is worth building yet. A concrete new skill with example prompts fits the **Skill request** issue form better.
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What would change, and what would it let people do that they cannot do well today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Why it matters
+      description: The situation that prompted it. Real examples beat hypothetical ones.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - implementation
+        - review-suite
+        - data-api
+        - workflow
+        - frontend
+        - skill-dev
+        - A new plugin
+        - The repository itself (docs, CI, tooling)
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+      description: Optional. Other ways to get the same result, including existing skills.

@@ -1,0 +1,70 @@
+[
+  {
+    "id": 9101,
+    "user": {
+      "login": "alice",
+      "type": "User"
+    },
+    "author_association": "MEMBER",
+    "body": "This check-then-mark is racy: two concurrent refreshes with the same token can both pass the `used` check before either one calls `mark_used`, so a stolen refresh token can be replayed once in parallel.",
+    "path": "session/refresh.py",
+    "line": 12,
+    "original_line": 12,
+    "side": "RIGHT",
+    "in_reply_to_id": null,
+    "html_url": "https://github.com/example/sessions/pull/57#discussion_r9101",
+    "created_at": "2026-10-08T15:01:00Z",
+    "updated_at": "2026-10-08T15:01:00Z"
+  },
+  {
+    "id": 9102,
+    "user": {
+      "login": "alice",
+      "type": "User"
+    },
+    "author_association": "MEMBER",
+    "body": "Off by one: at exactly `expires_at` the token is still accepted. Should be `>=`.",
+    "path": "session/refresh.py",
+    "line": 14,
+    "original_line": 14,
+    "side": "RIGHT",
+    "in_reply_to_id": null,
+    "html_url": "https://github.com/example/sessions/pull/57#discussion_r9102",
+    "created_at": "2026-10-08T15:02:00Z",
+    "updated_at": "2026-10-08T15:02:00Z"
+  },
+  {
+    "id": 9103,
+    "user": {
+      "login": "alice",
+      "type": "User"
+    },
+    "author_association": "MEMBER",
+    "body": "`token_urlsafe(32)` is only 32 characters of entropy. Please bump it to 64.",
+    "path": "session/refresh.py",
+    "line": 16,
+    "original_line": 16,
+    "side": "RIGHT",
+    "in_reply_to_id": null,
+    "html_url": "https://github.com/example/sessions/pull/57#discussion_r9103",
+    "created_at": "2026-10-08T15:03:00Z",
+    "updated_at": "2026-10-08T15:03:00Z"
+  },
+  {
+    "id": 9104,
+    "user": {
+      "login": "alice",
+      "type": "User"
+    },
+    "author_association": "MEMBER",
+    "body": "Can we read the TTL from config instead of hard-coding it here?",
+    "path": "session/refresh.py",
+    "line": 5,
+    "original_line": 5,
+    "side": "RIGHT",
+    "in_reply_to_id": null,
+    "html_url": "https://github.com/example/sessions/pull/57#discussion_r9104",
+    "created_at": "2026-10-08T15:04:00Z",
+    "updated_at": "2026-10-08T15:04:00Z"
+  }
+]

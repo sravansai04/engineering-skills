@@ -1,0 +1,80 @@
+{
+  "skill_name": "pr-description",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I'm done with the retry fix on this branch. Write me a PR description I can paste into GitHub. Don't open the PR yet.",
+      "expected_output": "Fixture: run `evals/files/make-fixture-repo.sh retry` and start in the printed directory. A draft-mode result: a specific imperative title and a body built from the real diff against the freshly fetched origin/main, with Summary (the problem from the commit body: 5xx deliveries were dropped, #311), grouped Key changes, How it was tested limited to evidence that exists, a one-line risk statement at minimum, and a Notes block listing the base, unverified claims and anything needing user input. The README commit that landed on origin/main after branching is not described. No push, no gh pr create.",
+      "files": [
+        "evals/files/make-fixture-repo.sh"
+      ],
+      "expectations": [
+        "Fetched the base and ran git log (two-dot) and git diff (three-dot) against origin/main, and checked for a repository PR template before choosing a structure",
+        "Did not push or run gh pr create or gh pr edit",
+        "The title names the behavior change, not a file name or a vague verb like 'Fix bug', and key changes are grouped by behavior rather than listed file by file",
+        "Does not describe the README change that landed on origin/main after the branch was cut",
+        "The testing section does not claim tests passed unless they were run in the session or reported by the user",
+        "The output ends with a Notes block that lists unverified items or placeholders"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Open a PR for this branch.",
+      "expected_output": "Fixture: run `evals/files/make-fixture-repo.sh template`. The remote is a local bare repository, so gh calls fail; grade the commands the agent runs or proposes, not remote side effects. The agent finds .github/pull_request_template.md, keeps its Description / Type of change / Checklist headings and order, answers every section, ticks only true boxes (New feature; Tests added or updated; the migration box only with a stated reason; Docs updated left unticked with a note), and adds risk and rollout content for the nullable-column migration (deploy order, backward compatibility, rollback). It leaves a visible screenshot placeholder for the settings toggle and reports it. It pushes with an explicit refspec to feat/digest-opt-out, then runs or proposes gh pr create with --base main, --body-file - and a quoted heredoc delimiter (or a body file). When gh can't reach a host, it says so and returns the finished title and body instead of a PR URL.",
+      "files": [
+        "evals/files/make-fixture-repo.sh"
+      ],
+      "expectations": [
+        "Found and used the repository's pull_request_template.md, keeping its headings in order, and did not tick a checklist item that the evidence does not support",
+        "Covered migration deploy order, backward compatibility and rollback",
+        "Did not fabricate an image URL; reported the screenshot placeholder to the user",
+        "Pushed (or proposed pushing) with an explicit refspec naming feat/digest-opt-out, before gh pr create",
+        "Used a quoted heredoc delimiter (for example <<'PR_BODY') or a body file, with an explicit --base",
+        "Reported honestly that the PR could not be created against a non-GitHub remote rather than inventing a URL"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I pushed three more commits to PR 482 after review. Can you refresh its description so it matches what's there now? A reviewer already ticked two boxes in it.",
+      "expected_output": "Needs a throwaway GitHub repository with an open PR 482 whose body has two ticked boxes; never run it against a real project. Without one, grade the commands the agent runs or proposes. Reads the current body and head with gh pr view 482, confirms the PR is OPEN, compares local HEAD with the PR's headRefOid (or reads the PR head with gh pr diff 482) before describing anything, recomputes the diff against the PR's baseRefName, updates Key changes and How it was tested to match the current diff, preserves the reviewer-ticked boxes and any bot or teammate content, and applies the result with gh pr edit 482 using --body-file.",
+      "files": [],
+      "expectations": [
+        "Read the existing body with gh pr view 482 before editing",
+        "Confirmed local HEAD matches the PR's headRefOid, or diffed the PR's head directly, before rewriting the body",
+        "Used the PR's baseRefName as the diff base",
+        "Kept the two reviewer-ticked checkboxes ticked",
+        "Updated rather than discarded sections that were still accurate",
+        "Applied the change with gh pr edit and a body file or quoted heredoc"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "open a PR for my retry change",
+      "expected_output": "Fixture: run `evals/files/make-fixture-repo.sh on-main`. The two commits sit directly on local main, which is two ahead of origin/main. The agent notices the current branch is the base branch and does not push: pushing HEAD would put the commits straight onto origin/main without review. It proposes creating a topic branch (git switch -c <name>, which carries the commits), explains that local main stays ahead of origin/main until the user resets it, and can still draft the title and body from origin/main..HEAD.",
+      "files": [
+        "evals/files/make-fixture-repo.sh"
+      ],
+      "expectations": [
+        "Did not run git push while on main, and did not run gh pr create",
+        "Explained that pushing from main would land the commits on origin/main without review",
+        "Offered to create a topic branch (for example git switch -c <topic>) so the commits move with it",
+        "Told the user that local main still holds the commits until it is reset to origin/main",
+        "Did not run a branch reset or force-push without approval"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Write the PR description for this branch, it's going to the upstream project.",
+      "expected_output": "Fixture: run `evals/files/make-fixture-repo.sh fork`. origin is a fork whose main is three commits behind upstream. The agent recognizes the fork setup from the remotes (gh can't answer for local remotes), uses upstream/main as the base, and describes only the two retry commits. The three upstream commits (Python versions in README, pinned requests, phony test target) do not appear. Notes say the base is upstream/main and mention that PR creation would need --repo and --head pointing at the upstream repository.",
+      "files": [
+        "evals/files/make-fixture-repo.sh"
+      ],
+      "expectations": [
+        "Fetched and diffed against upstream/main, not origin/main",
+        "The description covers only the retry change and its tests",
+        "Does not mention the requirements pin, the README Python note or the Makefile change",
+        "States the chosen base remote in the Notes block"
+      ]
+    }
+  ]
+}

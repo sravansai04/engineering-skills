@@ -1,0 +1,50 @@
+diff --git a/src/webhooks/deliver.py b/src/webhooks/deliver.py
+index 415ea26..c9a1dfc 100644
+--- a/src/webhooks/deliver.py
++++ b/src/webhooks/deliver.py
+@@ -1,14 +1,25 @@
++import time
++
+ import requests
+ 
+ from webhooks.models import Delivery
+ from webhooks.signing import sign
+ 
++MAX_ATTEMPTS = 5
++
+ 
+ def deliver(delivery_id, db):
+     d = db.get(Delivery, delivery_id)
+     body = d.payload_json
+     headers = {"X-Signature": sign(body, d.endpoint.secret)}
+-    resp = requests.post(d.endpoint.url, data=body, headers=headers, timeout=10)
+-    d.status = "delivered" if resp.ok else "failed"
+-    d.attempts += 1
++    for attempt in range(MAX_ATTEMPTS):
++        try:
++            resp = requests.post(d.endpoint.url, data=body, headers=headers, timeout=10)
++        except requests.RequestException:
++            resp = None
++        if resp is not None and resp.ok:
++            d.status = "delivered"
++            break
++        time.sleep(2 ** attempt)
++    d.attempts += attempt
+     db.commit()
+diff --git a/tests/webhooks/test_deliver.py b/tests/webhooks/test_deliver.py
+new file mode 100644
+index 0000000..46b9a6c
+--- /dev/null
++++ b/tests/webhooks/test_deliver.py
+@@ -0,0 +1,11 @@
++from unittest import mock
++
++from webhooks.deliver import deliver
++
++
++def test_deliver_marks_delivered(db, make_delivery):
++    d = make_delivery()
++    with mock.patch("webhooks.deliver.requests.post") as post:
++        post.return_value.ok = True
++        deliver(d.id, db)
++    assert d.status == "delivered"

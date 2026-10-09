@@ -1,0 +1,19 @@
+{
+  "name": "data-api",
+  "description": "Design and review HTTP, GraphQL and gRPC API contracts, write database migrations that are safe under rolling deploys, and review SQL queries, query plans and ORM call sites for correctness, speed and concurrency safety.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Sravan Sai Rahul Nalla"
+  },
+  "keywords": [
+    "api-design",
+    "rest",
+    "graphql",
+    "grpc",
+    "database",
+    "migrations",
+    "sql",
+    "postgresql",
+    "mysql"
+  ]
+}

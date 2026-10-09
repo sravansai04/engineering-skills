@@ -1,0 +1,99 @@
+{
+  "skill_name": "api-design",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Review this OpenAPI change before I merge it. Base: GET /v1/orders returns {\"data\": [Order], \"next_cursor\": string}; Order has fields id (string), customer_name (string), total (number, dollars), status (enum: open, closed). Head: Order.customer_name renamed to customerName; total is now an integer in cents; status gains a new value 'archived'; POST /v1/orders now requires a new body field 'channel'; the default page size dropped from 50 to 20.",
+      "expected_output": "Review-mode report with a verdict of Block (breaks with no migration plan) and a Breaking section that flags: the rename (removed field for readers); the units and type change on total (and float money as a pre-existing defect); the new enum value as breaking unless the enum was documented as open; the new required request field; and the default page-size change as a silent break. On the default change it says a differ sees it only if the default is declared in the spec, that oasdiff reports it at INFO level (below --fail-on ERR), and that a severity file promoting the default-value-changed checks makes CI catch it; a default that lives only in code stays invisible to tools. Each break gets an additive alternative (add the new field and keep the old one, make channel optional with a default, keep the default) and a deprecation path with Deprecation and Sunset headers. It suggests or reports running oasdiff breaking with the base spec first.",
+      "files": [],
+      "expectations": [
+        "Verdict is Block, with a Breaking section",
+        "Flags the customer_name rename, the dollars-to-cents type change on total, the new required channel field, and the new enum value (breaking unless documented as open)",
+        "Flags the default page-size change as a silent break, and explains that oasdiff reports a declared default change only at INFO unless a severity file promotes it",
+        "Gives an additive alternative for each break (keep the old field, make channel optional with a default, keep the old default)",
+        "Describes a deprecation path with Deprecation and Sunset headers",
+        "Suggests or reports running oasdiff breaking against the base spec"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "We need an endpoint that generates a sales summary export for a given month. It can take up to ten minutes for large customers, and customers want to be notified when it's done. Design the API.",
+      "expected_output": "Design-mode output: POST /v1/exports (or similar) returning 202 Accepted with Location pointing at an operation or status resource and Retry-After; an operation resource with a closed lifecycle (queued, running, succeeded, failed, canceled), a result link, and a Problem Details error on failure; Idempotency-Key on the POST; object-level authorization on the operation resource; an optional signed completion webhook with polling kept as the fallback; retention documented; a contract fragment with examples; and the design doc template filled or offered.",
+      "files": [],
+      "expectations": [
+        "Design mode: POST /v1/exports (or similar) returns 202 Accepted with Location pointing at an operation or status resource",
+        "The operation resource has a closed lifecycle (queued, running, succeeded, failed, canceled), a result link, and a Problem Details error on failure",
+        "Requires Idempotency-Key on the POST and object-level authorization on the operation resource",
+        "Offers an optional signed completion webhook with polling as the fallback",
+        "Includes a contract fragment with examples and fills or offers the design doc template"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Our mobile app retries POST /payments when the request times out, and a few customers got charged twice last week. How should the API handle this?",
+      "expected_output": "An advise-mode answer (recommendation, why, a short example, trade-off), not a full design doc. Recommends an Idempotency-Key header that the client generates once per logical payment and persists across restarts. The server scopes keys to the caller, stores a request fingerprint, enforces the key with a unique constraint rather than check-then-act, replays the stored response for a matching retry, returns 422 for the same key with a different body, 409 while the original is in flight, and 400 if the key is missing where required. It commits the in-progress record before calling the payment provider (no transaction held open across the call), uses a lease so a retry can take over an attempt that crashed instead of getting 409 forever, and passes the same derived key to the downstream payment provider so a takeover can't double-charge. Documents a retention window longer than the client retry window. Notes that the header comes from an IETF draft that is not an RFC.",
+      "files": [],
+      "expectations": [
+        "Answers in advise-mode shape (recommendation, why, a short example, trade-off), not a full design doc",
+        "Recommends a client-generated Idempotency-Key per logical payment, persisted across restarts",
+        "Server side: caller-scoped keys, a stored request fingerprint, a unique constraint rather than check-then-act, and replay of the stored response",
+        "Status codes: 422 for a reused key with a different body, 409 while the original is in flight",
+        "Commits the in-progress record before calling the provider, uses a lease for crashed attempts, and passes a derived key to the provider",
+        "Notes that the Idempotency-Key header comes from an IETF draft, not an RFC"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Design the webhooks we send to customers when an invoice is created, paid, or voided.",
+      "expected_output": "Design-mode output covering: an event envelope with a unique, retry-stable event id, a namespaced past-tense type (invoice.paid), created_at, and a schema version; a thin or minimal payload choice with the reason; Standard Webhooks-style HMAC-SHA256 signing over id.timestamp.raw-body with webhook-id, webhook-timestamp, and webhook-signature headers, per-endpoint secrets, and rotation with dual signatures; receiver guidance to verify on raw bytes in constant time with a tolerance window; an outbox written in the same transaction as the state change; at-least-once delivery with short timeouts, exponential backoff with jitter on a documented schedule, disabling of failing endpoints, and redelivery; receiver dedup on event id, tolerance of reordering, and fast ack; SSRF controls on delivery (https only, resolved-IP checks at connect time, no redirects, egress proxy, size and time caps).",
+      "files": [],
+      "expectations": [
+        "Defines an event envelope with a retry-stable id, a namespaced past-tense type, created_at, and a schema version",
+        "Chooses thin or fat payloads and says why",
+        "Specifies HMAC-SHA256 signing over id.timestamp.body with webhook-id, webhook-timestamp, and webhook-signature headers, per-endpoint secrets, and rotation",
+        "Tells receivers to verify on raw bytes in constant time within a timestamp tolerance, dedup on event id, tolerate reordering, and ack fast",
+        "Uses an outbox written with the state change, at-least-once delivery with backoff and jitter, and disabling of failing endpoints",
+        "Adds SSRF controls on delivery: https only, resolved-IP checks at connect time, no redirects, size and time caps"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Users can't remove their phone number through PATCH /v1/customers/{id}. Sending {\"phone\": null} does nothing. We deserialize into a Go struct with Phone *string. What's wrong and what should the API do?",
+      "expected_output": "Explains that a *string is nil both when the field is absent and when it is null, so the handler can't tell 'leave alone' from 'clear'. Recommends declaring JSON Merge Patch (application/merge-patch+json, RFC 7396) where null means remove, advertising it with Accept-Patch and rejecting other media types with 415, and implementing a tri-state decode (map[string]json.RawMessage or a wrapper type that records presence). Mentions validating the merged result rather than just the patch, rejecting read-only fields with a 400 or 422 naming the field, and applying the write atomically with If-Match where lost updates matter.",
+      "files": [],
+      "expectations": [
+        "Explains that a nil *string can't tell an absent field from an explicit null",
+        "Recommends JSON Merge Patch (application/merge-patch+json, RFC 7396), where null removes the field",
+        "Advertises it with Accept-Patch and rejects other media types with 415",
+        "Implements a tri-state decode, for example map[string]json.RawMessage or a presence-tracking wrapper",
+        "Validates the merged result, rejects read-only fields with 400 or 422 naming the field, and uses If-Match where lost updates matter"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Two admins edited the same pricing config at the same time through PUT /v1/pricing-configs/{id} and one admin's changes silently disappeared. How do we stop this?",
+      "expected_output": "Recommends optimistic concurrency: return a strong ETag on GET, require If-Match on PUT/PATCH, answer a stale version with 412 Precondition Failed (Problem Details body) and a missing If-Match with 428 Precondition Required on this resource. The version check and write must be one atomic conditional UPDATE (WHERE id = :id AND version = :expected), not read-compare-write, with 0 rows mapped to 404 or 412. Notes that newly requiring If-Match on an existing endpoint is a breaking change, so it should be phased in (optional first, then required, or for new clients).",
+      "files": [],
+      "expectations": [
+        "Recommends optimistic concurrency with a strong ETag on GET and If-Match on PUT or PATCH",
+        "Returns 412 Precondition Failed for a stale version and 428 Precondition Required when If-Match is missing",
+        "Makes the version check and write one atomic conditional UPDATE, not read-compare-write",
+        "Notes that requiring If-Match on an existing endpoint is breaking and phases it in"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "Add a list endpoint for orders. Clients need to filter by status and sort newest first. There are around 40 million orders.",
+      "expected_output": "Recommends cursor (keyset) pagination over offset, with a documented default and maximum page size; a total order with a unique tie-breaker (created_at DESC, id DESC); an opaque cursor carrying a format version, the last row's sort keys at full storage precision, and a binding (hash) to the filter and sort, rejecting a mismatched cursor with 400 and an invalid-cursor problem type; non-null sort keys; an allowlist of filterable and sortable fields backed by an index such as (status, created_at DESC, id DESC); fetching limit + 1 to detect the next page; next_cursor null on the last page; totals opt-in only; and a collection envelope object rather than a top-level array.",
+      "files": [],
+      "expectations": [
+        "Recommends cursor (keyset) pagination with a documented default and maximum page size",
+        "Uses a total order with a unique tie-breaker (created_at DESC, id DESC)",
+        "Makes the cursor opaque, versioned, and bound to the filter and sort, rejecting a mismatch with 400",
+        "Allowlists filterable and sortable fields backed by an index such as (status, created_at DESC, id DESC)",
+        "Fetches limit + 1 to detect the next page, returns next_cursor null on the last page, and keeps totals opt-in",
+        "Wraps the list in a collection envelope object, not a top-level array"
+      ]
+    }
+  ]
+}

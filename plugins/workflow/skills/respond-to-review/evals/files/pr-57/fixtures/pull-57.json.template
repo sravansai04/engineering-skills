@@ -1,0 +1,4 @@
+{"number": 57, "author_association": "OWNER", "user": {"login": "me", "type": "User"},
+ "head": {"ref": "fix/session-timeout", "sha": "__HEAD_SHA__", "repo": {"full_name": "example/sessions"}},
+ "base": {"ref": "main", "repo": {"full_name": "example/sessions"}},
+ "html_url": "https://github.com/example/sessions/pull/57"}

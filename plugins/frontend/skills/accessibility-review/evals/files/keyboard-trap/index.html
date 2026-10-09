@@ -1,0 +1,42 @@
+<!doctype html>
+<!-- Eval fixture with a PLANTED keyboard trap (SC 2.1.2). Do not copy this markup.
+     Expected tool output is in ../EXPECTED.md. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Notes</title>
+  <style>
+    body { margin: 0; padding: 16px 24px; font: 16px/1.5 system-ui, sans-serif; color: #1f2937; }
+    .editor { border: 1px solid #4b5563; padding: 8px; margin: 16px 0; }
+    .editor [contenteditable] { min-height: 80px; border: 1px solid #9ca3af; padding: 4px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Notes</h1>
+    <a href="#all">All notes</a>
+    <div class="editor" id="editor">
+      <div role="toolbar" aria-label="Formatting">
+        <button type="button">Bold</button>
+        <button type="button">Italic</button>
+      </div>
+      <div contenteditable="true" role="textbox" aria-multiline="true" aria-label="Note text"></div>
+    </div>
+    <button type="button">Save note</button>
+    <a href="#settings">Settings</a>
+  </main>
+  <script>
+    // The defect: the editor swallows Tab and cycles focus among its own controls, with no
+    // keyboard way out (Escape does nothing either).
+    const editor = document.getElementById('editor');
+    editor.addEventListener('keydown', (e) => {
+      if (e.key !== 'Tab') return;
+      e.preventDefault();
+      const items = [...editor.querySelectorAll('button, [contenteditable]')];
+      const i = items.indexOf(document.activeElement);
+      items[(i + (e.shiftKey ? items.length - 1 : 1)) % items.length].focus();
+    });
+  </script>
+</body>
+</html>

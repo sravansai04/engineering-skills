@@ -1,0 +1,14 @@
+[
+  {
+    "id": 8801,
+    "user": {
+      "login": "alice",
+      "type": "User"
+    },
+    "author_association": "MEMBER",
+    "state": "CHANGES_REQUESTED",
+    "submitted_at": "2026-10-08T15:05:00Z",
+    "body": "A few things inline. The refresh check looks racy to me.",
+    "html_url": "https://github.com/example/sessions/pull/57#pullrequestreview-8801"
+  }
+]

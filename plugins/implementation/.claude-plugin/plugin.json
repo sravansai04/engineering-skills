@@ -1,0 +1,25 @@
+{
+  "name": "implementation",
+  "description": "Turn a rough idea into an approved spec, plan a feature, build it end to end or execute a written plan, develop test-first, debug failures to a proven root cause, refactor or simplify without changing behavior, check APIs against the docs for the versions you pin, and verify a change is really finished before calling it done.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Sravan Sai Rahul Nalla"
+  },
+  "keywords": [
+    "implementation",
+    "brainstorming",
+    "specs",
+    "planning",
+    "feature-development",
+    "plan-execution",
+    "tdd",
+    "testing",
+    "debugging",
+    "root-cause",
+    "refactoring",
+    "simplification",
+    "documentation",
+    "context7",
+    "verification"
+  ]
+}

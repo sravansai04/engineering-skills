@@ -1,0 +1,43 @@
+.pricing {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+  padding: 48px 24px;
+}
+
+.pricing__plan {
+  padding: 32px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgba(17, 24, 39, 0.08);
+}
+
+.pricing__plan--featured {
+  border: 2px solid #2563eb;
+}
+
+.pricing__name {
+  font-size: 18px;
+  color: #111827;
+}
+
+.pricing__price {
+  font-size: 40px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.pricing__note {
+  font-size: 13px;
+  color: #6b7281;
+}
+
+.pricing__badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #2463eb;
+  font-size: 13px;
+}

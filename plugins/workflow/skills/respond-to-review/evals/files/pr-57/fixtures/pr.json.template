@@ -1,0 +1,5 @@
+{"number": 57, "url": "https://github.com/example/sessions/pull/57",
+ "title": "Rotate refresh tokens and shorten sessions to 30 minutes",
+ "author": {"login": "me"}, "state": "OPEN", "isCrossRepository": false,
+ "baseRefName": "main", "headRefName": "fix/session-timeout", "headRefOid": "__HEAD_SHA__",
+ "reviewDecision": "CHANGES_REQUESTED", "reviewRequests": []}

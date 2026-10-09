@@ -1,0 +1,124 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "reviewThreads": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "endCursor": null
+          },
+          "nodes": [
+            {
+              "id": "PRRT_kwDOexample1",
+              "isResolved": false,
+              "isOutdated": false,
+              "path": "session/refresh.py",
+              "line": 12,
+              "originalLine": 12,
+              "subjectType": "LINE",
+              "comments": {
+                "totalCount": 1,
+                "nodes": [
+                  {
+                    "fullDatabaseId": "9101",
+                    "databaseId": 9101,
+                    "author": {
+                      "login": "alice",
+                      "__typename": "User"
+                    },
+                    "authorAssociation": "MEMBER",
+                    "body": "This check-then-mark is racy: two concurrent refreshes with the same token can both pass the `used` check before either one calls `mark_used`, so a stolen refresh token can be replayed once in parallel.",
+                    "url": "https://github.com/example/sessions/pull/57#discussion_r9101",
+                    "createdAt": "2026-10-08T15:01:00Z",
+                    "lastEditedAt": null
+                  }
+                ]
+              }
+            },
+            {
+              "id": "PRRT_kwDOexample2",
+              "isResolved": false,
+              "isOutdated": false,
+              "path": "session/refresh.py",
+              "line": 14,
+              "originalLine": 14,
+              "subjectType": "LINE",
+              "comments": {
+                "totalCount": 1,
+                "nodes": [
+                  {
+                    "fullDatabaseId": "9102",
+                    "databaseId": 9102,
+                    "author": {
+                      "login": "alice",
+                      "__typename": "User"
+                    },
+                    "authorAssociation": "MEMBER",
+                    "body": "Off by one: at exactly `expires_at` the token is still accepted. Should be `>=`.",
+                    "url": "https://github.com/example/sessions/pull/57#discussion_r9102",
+                    "createdAt": "2026-10-08T15:02:00Z",
+                    "lastEditedAt": null
+                  }
+                ]
+              }
+            },
+            {
+              "id": "PRRT_kwDOexample3",
+              "isResolved": false,
+              "isOutdated": false,
+              "path": "session/refresh.py",
+              "line": 16,
+              "originalLine": 16,
+              "subjectType": "LINE",
+              "comments": {
+                "totalCount": 1,
+                "nodes": [
+                  {
+                    "fullDatabaseId": "9103",
+                    "databaseId": 9103,
+                    "author": {
+                      "login": "alice",
+                      "__typename": "User"
+                    },
+                    "authorAssociation": "MEMBER",
+                    "body": "`token_urlsafe(32)` is only 32 characters of entropy. Please bump it to 64.",
+                    "url": "https://github.com/example/sessions/pull/57#discussion_r9103",
+                    "createdAt": "2026-10-08T15:03:00Z",
+                    "lastEditedAt": null
+                  }
+                ]
+              }
+            },
+            {
+              "id": "PRRT_kwDOexample4",
+              "isResolved": false,
+              "isOutdated": false,
+              "path": "session/refresh.py",
+              "line": 5,
+              "originalLine": 5,
+              "subjectType": "LINE",
+              "comments": {
+                "totalCount": 1,
+                "nodes": [
+                  {
+                    "fullDatabaseId": "9104",
+                    "databaseId": 9104,
+                    "author": {
+                      "login": "alice",
+                      "__typename": "User"
+                    },
+                    "authorAssociation": "MEMBER",
+                    "body": "Can we read the TTL from config instead of hard-coding it here?",
+                    "url": "https://github.com/example/sessions/pull/57#discussion_r9104",
+                    "createdAt": "2026-10-08T15:04:00Z",
+                    "lastEditedAt": null
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

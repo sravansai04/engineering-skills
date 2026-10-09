@@ -1,0 +1,46 @@
+# OS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Editors and IDEs
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+.*.sw?
+*.sublime-workspace
+.project
+.settings/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Node (eval fixtures may be npm-installed while testing)
+node_modules/
+
+# Eval run output (skill-creator writes a <skill>-workspace/ next to the skill)
+*-workspace/
+
+# claude plugin eval output (docs/testing-skills.md): prompts, transcripts and scores
+plugins/*/evals/results/
+
+# Local environment and secrets
+.env
+.env.*
+
+# Local denylist for scripts/validate_skills.py (never commit it)
+.denylist.local

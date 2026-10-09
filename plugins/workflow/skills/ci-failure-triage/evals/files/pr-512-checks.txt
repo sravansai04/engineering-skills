@@ -1,0 +1,12 @@
+$ gh pr checks 512
+All checks were successful
+0 cancelled, 0 failing, 4 successful, 0 skipped, and 0 pending checks
+
+   NAME          DESCRIPTION  ELAPSED  URL
+✓  build                      2m11s    https://github.com/acme/web/actions/runs/7710021/job/90110001
+✓  e2e (3.12)                 9m48s    https://github.com/acme/web/actions/runs/7710021/job/90110004
+✓  lint                       38s      https://github.com/acme/web/actions/runs/7710021/job/90110002
+✓  unit                       4m02s    https://github.com/acme/web/actions/runs/7710021/job/90110003
+
+$ gh pr view 512 --json mergeStateStatus,mergeable,headRefOid
+{"headRefOid":"5f0e2a7c19b84d3e6a21c07f9b4d8e3a2c1f6b90","mergeStateStatus":"BLOCKED","mergeable":"MERGEABLE"}

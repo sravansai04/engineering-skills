@@ -1,0 +1,30 @@
+{
+  "number": 1312,
+  "title": "Retry failed webhook deliveries with backoff",
+  "body": "Customer endpoints that blip for a second or two drop our webhooks. This retries each delivery up to 5 times with exponential backoff before giving up. Deliveries that still fail keep going to the redrive job as before.\n\nCloses #1290.",
+  "state": "OPEN",
+  "isDraft": false,
+  "author": { "login": "dana-k" },
+  "authorAssociation": "MEMBER",
+  "isCrossRepository": false,
+  "baseRefName": "main",
+  "headRefName": "webhook-retries",
+  "headRefOid": "2eb4c0fe4dbed960fdd8922dc0834b01134023fb",
+  "mergeStateStatus": "CLEAN",
+  "additions": 25,
+  "deletions": 3,
+  "files": [
+    { "path": "src/webhooks/deliver.py", "additions": 14, "deletions": 3 },
+    { "path": "tests/webhooks/test_deliver.py", "additions": 11, "deletions": 0 }
+  ],
+  "commits": [
+    { "oid": "2eb4c0fe4dbed960fdd8922dc0834b01134023fb", "messageHeadline": "Retry failed webhook deliveries with backoff" }
+  ],
+  "statusCheckRollup": [
+    { "name": "lint", "conclusion": "SUCCESS" },
+    { "name": "unit-tests", "conclusion": "SUCCESS" }
+  ],
+  "comments": [],
+  "reviews": [],
+  "_fixture_note": "Offline stand-in for 'gh pr view 1312 --json ...' plus the author_association from the REST API. The unchanged files the change depends on are under context/, at the paths they have in the repo."
+}

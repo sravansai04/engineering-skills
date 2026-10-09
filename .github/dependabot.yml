@@ -1,0 +1,25 @@
+# Weekly updates for the actions used in .github/workflows, batched into one pull request.
+# Dependabot moves both the pinned commit SHA and the "# vX.Y.Z" comment beside it.
+#
+# It cannot see the tool versions pinned inside the workflows' `env:` blocks (actionlint and
+# its checksum, the Claude Code CLI, Playwright); bump those by hand.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    # Wait a week after a release before proposing it, so a bad or compromised release has
+    # time to be noticed and pulled first.
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    labels:
+      - dependencies
+      - "type:ci"
+    commit-message:
+      prefix: ci

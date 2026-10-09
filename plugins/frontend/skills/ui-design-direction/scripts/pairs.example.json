@@ -1,0 +1,35 @@
+{
+  "$comment": "Copy next to your token file, set $css to it (path relative to THIS file), and list every foreground/background pair that occurs in the UI, per theme. Name tokens, not literal values, so a re-run after a token edit checks the new values. kind: text (4.5:1), large-text (3:1), ui (3:1 for control borders, focus rings, icons, chart marks). The focus-ring-on-accent pair fails on purpose: it is the pair most often missed (fix it with a ring offset that shows the canvas between button and ring, or a two-tone ring).",
+  "$css": "tokens.example.css",
+  "light": {
+    "$selector": ":root",
+    "pairs": [
+      { "name": "text.primary on surface.canvas", "fg": "--color-text-primary", "bg": "--color-surface-canvas" },
+      { "name": "text.secondary on surface.canvas", "fg": "--color-text-secondary", "bg": "--color-surface-canvas" },
+      { "name": "text.secondary on surface.sunken", "fg": "--color-text-secondary", "bg": "--color-surface-sunken" },
+      { "name": "text.on-accent on accent.rest", "fg": "--color-text-on-accent", "bg": "--color-accent-rest" },
+      { "name": "text.on-accent on accent.hover", "fg": "--color-text-on-accent", "bg": "--color-accent-hover" },
+      { "name": "text.danger on surface.canvas", "fg": "--color-text-danger", "bg": "--color-surface-canvas" },
+      { "name": "border.control on surface.canvas", "fg": "--color-border-control", "bg": "--color-surface-canvas", "kind": "ui" },
+      { "name": "border.focus on surface.canvas", "fg": "--color-border-focus", "bg": "--color-surface-canvas", "kind": "ui" },
+      { "name": "border.focus on accent.rest", "fg": "--color-border-focus", "bg": "--color-accent-rest", "kind": "ui" },
+      { "name": "chart.1 mark on surface.canvas", "fg": "--color-chart-1", "bg": "--color-surface-canvas", "kind": "ui" },
+      { "name": "chart.2 mark on surface.canvas", "fg": "--color-chart-2", "bg": "--color-surface-canvas", "kind": "ui" }
+    ]
+  },
+  "dark": {
+    "$selector": "[data-theme=dark]",
+    "$scope": "root",
+    "pairs": [
+      { "name": "text.primary on surface.canvas", "fg": "--color-text-primary", "bg": "--color-surface-canvas" },
+      { "name": "text.secondary on surface.raised", "fg": "--color-text-secondary", "bg": "--color-surface-raised" },
+      { "name": "text.on-accent on accent.rest", "fg": "--color-text-on-accent", "bg": "--color-accent-rest" },
+      { "name": "text.on-accent on accent.hover", "fg": "--color-text-on-accent", "bg": "--color-accent-hover" },
+      { "name": "text.danger on surface.canvas", "fg": "--color-text-danger", "bg": "--color-surface-canvas" },
+      { "name": "border.control on surface.canvas", "fg": "--color-border-control", "bg": "--color-surface-canvas", "kind": "ui" },
+      { "name": "chart.1 mark on surface.canvas", "fg": "--color-chart-1", "bg": "--color-surface-canvas", "kind": "ui" },
+      { "name": "chart.2 mark on surface.canvas", "fg": "--color-chart-2", "bg": "--color-surface-canvas", "kind": "ui" },
+      { "name": "white text on scrim over a white image (worst case)", "fg": "#ffffff", "bg": "--color-scrim", "backdrop": "#ffffff" }
+    ]
+  }
+}

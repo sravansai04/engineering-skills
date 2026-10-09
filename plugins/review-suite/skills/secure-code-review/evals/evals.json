@@ -1,0 +1,100 @@
+{
+  "skill_name": "secure-code-review",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Can you security review this diff before I merge it? It's our Express API (Postgres via node-postgres, Sequelize for users).\n\n```js\n// routes/orders.js\nrouter.get('/api/orders/:id', requireAuth, async (req, res) => {\n  const { rows } = await pool.query(`SELECT * FROM orders WHERE id = ${req.params.id}`);\n  if (!rows[0]) return res.sendStatus(404);\n  res.json(rows[0]);\n});\n\n// routes/users.js\nrouter.put('/api/users/me', requireAuth, async (req, res) => {\n  await User.update(req.body, { where: { id: req.user.id } });\n  res.sendStatus(204);\n});\n```\n\nrequireAuth verifies the session cookie and sets req.user. The User model has columns name, email, avatarUrl, role, isEmailVerified.",
+      "expected_output": "A structured security report. Reports SQL injection in the orders route (template literal into pool.query; Confirmed; fix with $1 placeholder). Reports IDOR/BOLA in the same route (no ownership filter; any signed-in user can read any order; fix by scoping to req.user's account and returning 404). Reports mass assignment in PUT /api/users/me (req.body can set role or isEmailVerified; privilege escalation; fix with an explicit field allowlist). Each finding has location, source-to-sink, exploit scenario, likelihood x impact severity, fix, and regression test. OWASP/CWE tags are plausible (CWE-89/A05, CWE-639/A01 or API1, CWE-915/A08 or API3). No padding with generic advice.",
+      "files": [],
+      "expectations": [
+        "Reports SQL injection in the orders route (template literal into pool.query), Confirmed, fixed with a $1 placeholder",
+        "Reports IDOR in the same route: no ownership filter, so any signed-in user reads any order; fix scopes to the caller and returns 404",
+        "Reports mass assignment in PUT /api/users/me (req.body can set role or isEmailVerified) as privilege escalation, fixed with a field allowlist",
+        "Each finding has a location, source-to-sink evidence, an exploit scenario, likelihood x impact severity, a fix, and a regression test",
+        "Tags are plausible (CWE-89 with A05, CWE-639 with A01 or API1, CWE-915 with A08 or API3)",
+        "Includes a Verdict line and no padding with generic advice"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "We added an 'import avatar from URL' feature to our Flask app. Anything an attacker could abuse here?\n\n```python\n@app.post('/profile/avatar')\n@login_required\ndef import_avatar():\n    data = request.get_json()\n    resp = requests.get(data['url'])\n    if resp.headers.get('Content-Type', '').startswith('image/'):\n        path = os.path.join(app.config['AVATAR_DIR'], data['filename'])\n        with open(path, 'wb') as f:\n            f.write(resp.content)\n        current_user.avatar = data['filename']\n        db.session.commit()\n        return {'ok': True}\n    return {'error': 'not an image', 'body': resp.text[:500]}, 400\n```",
+      "expected_output": "Reports SSRF: user-controlled URL fetched server-side with redirects followed and no destination checks, and the error branch returns up to 500 chars of the response body, which makes the SSRF readable (e.g. cloud metadata or internal services). Fix: scheme allowlist, resolve and pin the IP, block private/link-local/metadata ranges, no redirects or re-validate, timeout, size cap, and don't echo the body. Reports path traversal / arbitrary file write via data['filename'] (os.path.join with '../' or an absolute path), fixed with server-generated names or a resolve-and-contain check. Notes the missing timeout and unbounded download as resource-consumption issues, and the Content-Type check as attacker-controlled (not a control). Severity ratings use likelihood x impact with stated reasons. Uses the report format.",
+      "files": [],
+      "expectations": [
+        "Reports SSRF: a user-controlled URL fetched server-side with redirects followed and no destination check",
+        "Notes that echoing up to 500 characters of the response body makes the SSRF readable",
+        "Fixes SSRF with a scheme allowlist, resolved-IP checks against private, link-local, and metadata ranges, no redirects, a timeout, and a size cap",
+        "Reports path traversal or arbitrary file write through data['filename'], fixed with generated names or a resolve-and-contain check",
+        "Notes the missing timeout and unbounded download, and that the Content-Type check is attacker-controlled",
+        "Rates severity as likelihood x impact with reasons, in the report format"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Security review please, our scanner flagged a bunch of stuff in this Go file and I want to know what's real.\n\n```go\nvar tables = map[string]string{\"daily\": \"metrics_daily\", \"hourly\": \"metrics_hourly\"}\n\nfunc load(ctx context.Context, db *sql.DB, gran string, since time.Time) (*sql.Rows, error) {\n    t, ok := tables[gran]\n    if !ok {\n        return nil, errBadGranularity\n    }\n    return db.QueryContext(ctx, fmt.Sprintf(\"SELECT * FROM %s WHERE ts >= $1\", t), since)\n}\n\nfunc etag(body []byte) string {\n    sum := md5.Sum(body)\n    return hex.EncodeToString(sum[:])\n}\n\nfunc retryDelay(attempt int) time.Duration {\n    return time.Duration(attempt*100+rand.Intn(50)) * time.Millisecond\n}\n\nfunc gitVersion() (string, error) {\n    out, err := exec.Command(\"git\", \"rev-parse\", \"HEAD\").Output()\n    return strings.TrimSpace(string(out)), err\n}\n```",
+      "expected_output": "Concludes that none of the four scanner hits is an exploitable vulnerability and explains why for each under 'Ruled out': the table name comes from a fixed allowlist map and the value is bound as $1; MD5 is used for an ETag, not for security; math/rand is used for retry jitter, not for secrets; exec.Command uses a fixed program and fixed arguments with no shell. Reports no Critical/High/Medium findings. At most it notes minor hardening. It still states the scope and what was checked, and doesn't invent issues to fill the report.",
+      "files": [],
+      "expectations": [
+        "Concludes that none of the four scanner hits is exploitable",
+        "Lists each under Ruled out with the reason: allowlisted table name with a bound $1, MD5 for an ETag, math/rand for jitter, exec.Command with fixed arguments",
+        "Reports no critical, high, or medium findings, at most a hardening note",
+        "Still states the scope and what was checked, with a Verdict of Merge"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Small perf tweak, can you security check it before I merge? We moved the report export route off the API router so our CDN can cache the CSV.\n\n```diff\n // server.js\n const api = express.Router();\n api.use(requireAuth);          // verifies the session cookie, sets req.user\n api.get('/reports/:id', getReport);\n-api.get('/reports/:id/export', exportReport);\n+app.get('/api/reports/:id/export', exportReport);\n app.use('/api', api);\n```\n\n```js\n// handlers/reports.js (unchanged)\nexport async function exportReport(req, res) {\n  const report = await Report.findByPk(req.params.id);   // integer primary key\n  if (!report) return res.sendStatus(404);\n  res.type('text/csv').send(toCsv(report.rows));\n}\n```",
+      "expected_output": "Reports that the export route now bypasses requireAuth: it is registered on app before the /api router, so the middleware never runs and any unauthenticated visitor can download any report by iterating integer IDs (missing authentication, CWE-306; OWASP A07:2025 or A01:2025 / API2 or API5:2023). Notes this comes from walking the entry points (Pass B), not from a data-flow trace, and that the bug is in what the diff moved rather than in any changed line of the handler. Severity is Critical or High with Likelihood High (unauthenticated, one request, enumerable IDs) × Impact High (every customer's report). Also reports, as a separate pre-existing issue, that exportReport has no ownership or account filter even when authenticated (IDOR, CWE-639), and flags that CDN caching of per-customer data is itself an exposure risk (cache key and Cache-Control). Fix: keep the route on the authenticated router, scope the lookup to the caller's account, and send Cache-Control: private, no-store (or cache per user only with a signed, expiring URL). Regression test: an unauthenticated request to the export route gets 401.",
+      "files": [],
+      "expectations": [
+        "Reports that the export route is registered on app before the /api router, so requireAuth never runs and anyone can download any report",
+        "Notes the bug comes from walking entry points and from what the diff moved, not from a changed line in the handler",
+        "Rates it critical or high with Likelihood High x Impact High and reasons",
+        "Reports the missing ownership filter in exportReport as a separate pre-existing finding that doesn't count toward the verdict",
+        "Flags CDN caching of per-customer data and recommends Cache-Control: private, no-store",
+        "Gives a regression test: an unauthenticated request to the export route gets 401"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Can you check this new GitHub Actions workflow for security problems? It builds a preview site for every PR, including PRs from forks.\n\n```yaml\nname: PR preview\non:\n  pull_request_target:\n    types: [opened, synchronize]\npermissions:\n  contents: write\n  pull-requests: write\njobs:\n  preview:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          ref: ${{ github.event.pull_request.head.sha }}\n      - run: npm ci && npm run build\n        env:\n          PREVIEW_DEPLOY_TOKEN: ${{ secrets.PREVIEW_DEPLOY_TOKEN }}\n      - run: echo \"Built preview for: ${{ github.event.pull_request.title }}\"\n      - run: ./scripts/deploy-preview.sh\n        env:\n          PREVIEW_DEPLOY_TOKEN: ${{ secrets.PREVIEW_DEPLOY_TOKEN }}\n```",
+      "expected_output": "Treats the workflow as reachable by anyone who can open a fork PR, and does not demote it as build tooling. Reports two findings. (1) Critical: pull_request_target checks out and runs the PR head (npm ci runs the PR's install scripts; npm run build and deploy-preview.sh are attacker-controlled) with the deploy secret in the environment and a contents: write token, so any GitHub user can steal the secret and push to the repository. (2) High or Critical: script injection, because the PR title is interpolated with ${{ }} directly into a run step, so a title containing shell syntax executes in a privileged job. Fixes: build untrusted code under the pull_request trigger with no secrets and a read-only token, and deploy from a separate workflow_run job that never executes PR code; pass the title through an env variable and quote it; set least-privilege permissions per job. Notes action pinning to a commit SHA as hardening. Uses the report format with likelihood × impact reasoning.",
+      "files": [],
+      "expectations": [
+        "Treats the workflow as reachable by anyone who can open a fork PR",
+        "Reports as critical that pull_request_target checks out and runs the PR head with the deploy secret and a write token",
+        "Reports the PR title interpolated with ${{ }} into a run step as script injection, rated high or critical",
+        "Fixes with the pull_request trigger for untrusted builds, a separate workflow_run deploy job, the title passed through an env variable, and least-privilege permissions",
+        "Notes action pinning to a commit SHA as hardening, not a vulnerability"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Here's our payment provider webhook handler. Anything wrong with the signature verification or replay handling?\n\n```js\napp.use(express.json());\n\napp.post('/webhooks/payments', async (req, res) => {\n  const sig = req.get('X-Signature');\n  if (sig) {\n    const expected = crypto\n      .createHmac('sha256', process.env.WEBHOOK_SECRET)\n      .update(JSON.stringify(req.body))\n      .digest('hex');\n    if (sig !== expected) return res.sendStatus(401);\n  }\n  if (req.body.type === 'payment.succeeded') {\n    await Order.update({ status: 'paid' }, { where: { id: req.body.data.orderId } });\n  }\n  res.sendStatus(200);\n});\n```\n\nThe provider also sends an X-Timestamp header and an event id in the body; we don't use either.",
+      "expected_output": "Leads with a Critical finding: verification fails open when the X-Signature header is absent, so any unauthenticated caller can POST a payment.succeeded event and mark any order as paid (CWE-345 or CWE-347; Likelihood High × Impact High for money). Also reports: the HMAC is computed over JSON.stringify of the parsed body rather than the raw bytes, which breaks on legitimate deliveries and pushes teams to disable verification; no replay protection (X-Timestamp is ignored and the event id isn't deduped), so a captured delivery can be replayed (CWE-294); non-constant-time comparison with !== (lower severity); and acting on the payload's orderId and type without re-fetching the payment from the provider. Fix: express.raw for this route, reject a missing or malformed signature, check a signed timestamp within a short tolerance, compare with crypto.timingSafeEqual on equal-length buffers, dedupe on event id with a unique constraint, and re-fetch authoritative payment state before updating the order. Each finding has severity reasoning and a regression test (for example, a request with no signature header gets 401).",
+      "files": [],
+      "expectations": [
+        "Leads with a critical finding: verification fails open when X-Signature is absent, so anyone can mark an order paid",
+        "Reports the HMAC computed over JSON.stringify of the parsed body instead of the raw bytes",
+        "Reports missing replay protection: the timestamp is ignored and the event id isn't deduped",
+        "Reports the non-constant-time !== comparison at lower severity, and acting on the payload without re-fetching the payment",
+        "Fixes with express.raw, rejecting missing signatures, a signed-timestamp tolerance, crypto.timingSafeEqual, dedupe on event id, and re-fetching state",
+        "Gives a regression test, for example a request with no signature header gets 401"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "Security review for our new link-preview endpoint (Go). It runs as a pod in Kubernetes on AWS. I don't know what our network policies or instance metadata settings are.\n\n```go\n// mounted under the authenticated API router\nfunc (h *Handler) PreviewLink(w http.ResponseWriter, r *http.Request) {\n    u, err := url.Parse(r.URL.Query().Get(\"url\"))\n    if err != nil || (u.Scheme != \"http\" && u.Scheme != \"https\") {\n        http.Error(w, \"bad url\", http.StatusBadRequest)\n        return\n    }\n    resp, err := h.client.Get(u.String()) // h.client = &http.Client{Timeout: 5 * time.Second}\n    if err != nil {\n        http.Error(w, err.Error(), http.StatusBadGateway)\n        return\n    }\n    defer resp.Body.Close()\n    title := extractTitle(io.LimitReader(resp.Body, 1<<20))\n    json.NewEncoder(w).Encode(map[string]string{\"title\": title, \"status\": resp.Status})\n}\n```",
+      "expected_output": "Reports SSRF as Likely, not Confirmed: any signed-in user controls the destination, nothing checks the resolved IP, and the default client follows redirects, but the impact depends on deployment facts outside the code. The finding states the exact checks someone must run, such as whether a pod of this service can reach the instance metadata endpoint (169.254.169.254) and whether it requires session tokens (IMDSv2 with a hop limit that blocks pods), and whether NetworkPolicies allow egress to cluster-internal and RFC 1918 ranges; these also appear under 'Needs runtime or deployment verification'. Notes that the response leaks the page title, the status line, and error text (err.Error()), which makes the SSRF partly readable and helps port scanning. Gives a conditional severity with reasons (for example High if metadata or internal services are reachable, lower if egress is locked down). Fix: a net.Dialer Control function that rejects private, loopback, link-local, and metadata addresses at connect time, a CheckRedirect that blocks or re-validates each hop, and generic error messages. Credits the existing timeout and size limit as mitigations rather than reporting them.",
+      "files": [],
+      "expectations": [
+        "Reports SSRF as Likely, not Confirmed, because impact depends on deployment facts outside the code",
+        "Names the exact checks to run: whether pods reach 169.254.169.254, IMDSv2 hop-limit settings, and NetworkPolicy egress to internal ranges",
+        "Lists those checks under Needs runtime or deployment verification",
+        "Notes that the response leaks the page title, status line, and error text, which helps an attacker read responses and scan ports",
+        "Gives a conditional severity with reasons, and a fix with a dialer Control function, a CheckRedirect, and generic errors",
+        "Credits the existing timeout and size limit as mitigations"
+      ]
+    }
+  ]
+}

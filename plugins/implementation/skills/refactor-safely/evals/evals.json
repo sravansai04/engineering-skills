@@ -1,0 +1,105 @@
+{
+  "skill_name": "refactor-safely",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "The billing project is in evals/files/invoice-py. billing/invoice.py has one long function, build_invoice(), with no tests. It mixes tax calculation, discount rules and the text lines we hand to the PDF renderer. Clean it up so I can add a new VAT rule next sprint. Don't change what it outputs.",
+      "expected_output": "Discovers there is no test suite (pyproject points pytest at a missing tests/ directory) and records that as the baseline. Adds characterization or golden-master tests that pin build_invoice's full return value across customer tiers, terms, countries (US states, EU with and without VAT ID, other), coupons, bulk and PROMO items, making the output deterministic by freezing date.today() and controlling uuid4. Commits the tests separately, passing on the unmodified code. Then restructures in small named steps (Extract Function or Split Phase for header, line totals, discounts, tax and formatting; Replace Function with Command if the shared locals block extraction), running the tests after each. Leaves quirks such as the float rounding and the '-€' discount formatting pinned, not fixed. Does not add the VAT rule. Reports in the skill's format.",
+      "files": [
+        "evals/files/invoice-py/pyproject.toml",
+        "evals/files/invoice-py/billing/__init__.py",
+        "evals/files/invoice-py/billing/invoice.py"
+      ],
+      "expectations": [
+        "Establishes that no tests exist, then adds characterization or golden-master tests before any structural change, and they pass against the unmodified code",
+        "Makes the pinned output deterministic by freezing or injecting the date and controlling the uuid-based invoice number, rather than excluding those fields from the assertions",
+        "Covers the tax branches (US state, EU with VAT ID, EU without VAT ID, other country) and the discount branches in the pinned inputs",
+        "Keeps the test commit separate from the refactoring commits, and performs the restructuring as a sequence of named refactorings with the tests run between steps",
+        "Does not change any output value, including existing quirks, and does not implement the VAT rule",
+        "Final report states that no behavior change is intended and lists the steps and the verification results"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "In evals/files/account-ts, rename the `userId` property on the Account model to `accountOwnerId` everywhere. The service returns Account as JSON to our mobile apps and stores it in Postgres through TypeORM.",
+      "expected_output": "Uses semantic find-references (or a ts-morph script from the terminal) plus a case-variant text search. Notices that Account.userId is an implicit column name (no naming strategy), that res.json(account) makes it the JSON key the mobile apps read, that /users/:userId/accounts uses it in a route param and query, and that ownerReport.ts names the \"userId\" column inside a raw SQL string. Renames the TypeScript property but pins the column with @Column({ name: \"userId\" }) and keeps the JSON key stable (a toJSON or serializer mapping, or both keys during a transition). Leaves the test's expected JSON unchanged. Hands any column rename to db-migration-safety and any wire-field change to an expand-contract plan for old app versions.",
+      "files": [
+        "evals/files/account-ts/package.json",
+        "evals/files/account-ts/tsconfig.json",
+        "evals/files/account-ts/src/models/Account.ts",
+        "evals/files/account-ts/src/api/accounts.ts",
+        "evals/files/account-ts/src/reports/ownerReport.ts",
+        "evals/files/account-ts/test/accounts.test.ts"
+      ],
+      "expectations": [
+        "Searches for several casings (userId, user_id and so on), not only the exact identifier, and finds the raw SQL string in src/reports/ownerReport.ts that references the \"userId\" column",
+        "Identifies the JSON returned by res.json(account) as a published contract that older mobile app versions still depend on",
+        "Pins the database column name explicitly (for example @Column({ name: \"userId\" })) instead of letting the rename change it, or defers the column rename to a separate migration",
+        "Keeps the old JSON key available (explicit mapping, both keys, or a serializer) rather than a hard rename of the wire field",
+        "Does not edit the expected JSON in test/accounts.test.ts",
+        "Reports the reach as published and lists the follow-up contract step"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "We want to delete the old LegacyReportExporter class in our Spring app (evals/files/reports-spring). I'm pretty sure nothing uses it anymore. Can you remove it?",
+      "expected_output": "Treats 'nothing uses it' as a hypothesis. Find-references on the class shows no Java callers, but searching for its bean name and string forms finds that @Component(\"legacyExporter\") is selected by name through application.yml (reports.quarterly-exporter: legacyExporter) and the QuarterlyPartnerExportJob, which only runs at 06:00 on the first day of each quarter. Does not delete the class. Reports the live reference and explains that removing it would break the quarterly partner export at its next run. Proposes, as a separate behavior change, switching the quarterly job to another exporter only if the fixed-width format is no longer required, then deleting the class in its own commit, with a tombstone log or counter if any doubt remains through a full quarter.",
+      "files": [
+        "evals/files/reports-spring/pom.xml",
+        "evals/files/reports-spring/src/main/resources/application.yml",
+        "evals/files/reports-spring/src/main/java/com/acme/reports/LegacyReportExporter.java",
+        "evals/files/reports-spring/src/main/java/com/acme/reports/QuarterlyPartnerExportJob.java",
+        "evals/files/reports-spring/src/main/java/com/acme/reports/ReportProperties.java",
+        "evals/files/reports-spring/src/main/java/com/acme/reports/ReportExporter.java",
+        "evals/files/reports-spring/src/main/java/com/acme/reports/CsvReportExporter.java",
+        "evals/files/reports-spring/src/main/java/com/acme/reports/PartnerFeedClient.java",
+        "evals/files/reports-spring/src/main/java/com/acme/reports/ReportsApplication.java"
+      ],
+      "expectations": [
+        "Searches for string references (the bean name, config keys, the fully qualified class name), not only compiler or IDE references",
+        "Finds that application.yml selects the legacyExporter bean for the quarterly partner export job",
+        "Does not delete LegacyReportExporter while that reference exists",
+        "Points out that the job runs only once a quarter, so the breakage would surface late and runtime evidence needs a window covering a quarter end",
+        "Treats changing the quarterly job's exporter as a separate behavior change that needs confirmation, not part of the deletion"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Checkout is down in production since the 14:05 deploy: the payment webhook handler throws when currency is null. While you're in there, refactor that handler, it's a 400-line mess. We need checkout back up fast.",
+      "expected_output": "Recognizes an incident and applies 'When not to refactor'. Restores service with the smallest fix (or a rollback of the 14:05 deploy) plus a regression test for the null currency, or hands the diagnosis to debug-root-cause. Explicitly defers the refactor to a follow-up after the incident, to be done with a safety net and in separate changes.",
+      "files": [],
+      "expectations": [
+        "Does not restructure the handler as part of the incident fix",
+        "Proposes the smallest change that restores checkout, or a rollback, with a test covering the null currency case",
+        "Records the refactor as a follow-up to do after the incident, with tests first",
+        "Explains briefly why mixing a refactor into a hotfix is risky (review, rollback, and telling the fix apart from the restructuring)"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "processOrder in our checkout service is 300 lines with a big switch on payment type. Clean it up and add gift card payments in the same PR so I can ship this week.",
+      "expected_output": "Splits the work. First a behavior-preserving refactor (characterization tests at the processOrder boundary, then small named steps such as Extract Function and replacing the switch with handlers) with no assertion changes. Then gift cards as a separate change on top, with its own tests. Checks the repo's merge strategy, and if PRs are squash-merged, makes the refactor and the feature separate (stacked) PRs; otherwise at minimum separate commits. Explains why mixing them hurts review and revert.",
+      "files": [],
+      "expectations": [
+        "Separates the preparatory refactor from the gift card feature instead of mixing them in one change",
+        "Lands or plans the refactor first, with characterization tests before the restructuring",
+        "Recommends separate PRs (stacked if needed), and notes that squash merging collapses separate commits within one PR",
+        "Adds gift cards with new tests of their own rather than by editing the refactor's pinned assertions",
+        "Explains the review and revert benefit of keeping them apart"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Remove createInvoice v1 from our public TypeScript SDK on npm. createInvoiceV2 has been out for a while and nobody should still be using v1.",
+      "expected_output": "Classifies createInvoice as a published symbol with consumers outside the repo. Does not delete it in the next release. Marks it @deprecated naming createInvoiceV2, adds a changelog entry and a migration guide with before and after examples, optionally warns once at runtime, migrates internal callers, and adds a lint ban so internal use cannot creep back. Measures remaining use (npm dependents, telemetry, known consumers). Plans removal for the next major version, after the deprecation has shipped in a minor release. Suggests running an API-diff tool such as API Extractor to confirm nothing else public changes.",
+      "files": [],
+      "expectations": [
+        "Does not delete createInvoice in the same release, or in a minor or patch release",
+        "Adds a @deprecated JSDoc marker that names createInvoiceV2",
+        "Calls for a changelog entry and migration guidance",
+        "Proposes measuring remaining use before removal (dependents, telemetry or consumer outreach)",
+        "Schedules removal for a future major version under semantic versioning"
+      ]
+    }
+  ]
+}

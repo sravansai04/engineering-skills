@@ -1,0 +1,11 @@
+# Issue chooser settings. The security link only works once private vulnerability reporting
+# is turned on (Settings > Code security > Private vulnerability reporting), and the Q&A link
+# needs Discussions enabled with its default "Q&A" category (slug: q-a).
+blank_issues_enabled: false
+contact_links:
+  - name: Ask a question
+    url: https://github.com/sravansai04/engineering-skills/discussions/categories/q-a
+    about: Questions about installing or using the skills go to Discussions Q&A. Issues are for bugs, skill requests and skill improvements.
+  - name: Report a security vulnerability
+    url: https://github.com/sravansai04/engineering-skills/security/advisories/new
+    about: Report it privately through GitHub. Please do not open a public issue for a security problem.

@@ -1,0 +1,14 @@
+[project]
+name = "tasktrack"
+version = "0.4.0"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+tasktrack = "cli.main:main"
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

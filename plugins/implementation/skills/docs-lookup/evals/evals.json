@@ -1,0 +1,168 @@
+{
+  "skill_name": "docs-lookup",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "In this FastAPI service, add a helper that turns a request model into a plain dict for structured logging, and use it in the create_order handler. Make sure it uses the right pydantic API.",
+      "expected_output": "Reads pydantic==2.9.2 from requirements.txt (not the >=1.10,<3 range in pyproject.toml), writes the helper with model_dump() (the v2 API; dict() is deprecated there), and confirms the method against pydantic 2.9.2 itself: the installed copy if a virtualenv exists, otherwise a wheel fetched into a scratch directory outside the repo, or else reports documented-only. Ends with a Docs check block.",
+      "files": [
+        "evals/files/pydantic-v2/pyproject.toml",
+        "evals/files/pydantic-v2/requirements.txt",
+        "evals/files/pydantic-v2/app/models.py",
+        "evals/files/pydantic-v2/app/main.py"
+      ],
+      "expectations": [
+        "States pydantic 2.9.2 and names requirements.txt as the source; does not report the pyproject.toml range as the version",
+        "Uses model_dump(), not dict()",
+        "Confirms model_dump against pydantic 2.9.2 code (installed copy, or a fetched copy kept outside the repository) or labels the result documented-only; does not label it verified on memory alone",
+        "Does not install packages into the project or edit requirements.txt or pyproject.toml",
+        "Includes a 'Docs check' block with a Confidence line"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "In this FastAPI service, add a helper that turns a request model into a plain dict for structured logging, and use it in the create_order handler. Make sure it uses the right pydantic API.",
+      "expected_output": "Same prompt as eval 1, but the project pins pydantic==1.10.18 (fastapi 0.99.1). Reads that pin, uses .dict() because model_dump() does not exist in 1.x, and notes that moving to pydantic 2 would rename it, without upgrading anything.",
+      "files": [
+        "evals/files/pydantic-v1/pyproject.toml",
+        "evals/files/pydantic-v1/requirements.txt",
+        "evals/files/pydantic-v1/app/models.py",
+        "evals/files/pydantic-v1/app/main.py"
+      ],
+      "expectations": [
+        "States pydantic 1.10.18 from requirements.txt",
+        "Uses .dict(), not model_dump()",
+        "Does not bump pydantic or fastapi to make a v2 example work",
+        "Mentions that pydantic 2 renames the method, as a note rather than a change"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Is ioutil.ReadAll still the right call in fetch.go, or should we change it?",
+      "expected_output": "Reads the go 1.22 directive in go.mod, reports that io/ioutil is deprecated and io.ReadAll (available since Go 1.16) replaces it, cites the evidence, and changes fetch.go only if asked. Mentions store.go's ioutil.WriteFile once without rewriting it.",
+      "files": [
+        "evals/files/go-ioutil/go.mod",
+        "evals/files/go-ioutil/fetch.go",
+        "evals/files/go-ioutil/store.go"
+      ],
+      "expectations": [
+        "Reports Go 1.22 from the go directive in go.mod",
+        "Identifies io/ioutil as deprecated and io.ReadAll as the replacement available in that Go version",
+        "Cites the evidence source (go doc output, the 'Deprecated:' doc comment, or a versioned pkg.go.dev page)",
+        "Does not rewrite store.go without being asked"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "We're on Express 4. What would break if we moved to Express 5? Don't change anything yet.",
+      "expected_output": "Pins express 4.21.2 from package-lock.json, uses the official Express 5 migration guide, searches the repo for each affected API, and returns an impact table with file:line hits: app.del, req.param, res.json(obj, status), res.send(<number>), res.sendfile, res.redirect('back'), the unnamed '/files/*' wildcard and the ':id?' optional parameter. Calls out separately that Express 5 needs Node 18 while .nvmrc and engines pin Node 16. Modifies nothing, and leaves carrying out the upgrade to refactor-safely.",
+      "files": [
+        "evals/files/express4/.nvmrc",
+        "evals/files/express4/package.json",
+        "evals/files/express4/package-lock.json",
+        "evals/files/express4/src/server.js",
+        "evals/files/express4/src/db.js",
+        "evals/files/express4/src/routes/users.js",
+        "evals/files/express4/src/routes/files.js"
+      ],
+      "expectations": [
+        "Pins express 4.21.2 from package-lock.json, not the ^4.21.0 range",
+        "Names the official Express 5 migration guide or release notes as the source",
+        "Produces an impact table whose rows cite concrete file and line locations",
+        "Flags at least five of: app.del, req.param, res.json(obj, status), res.send(<number>), res.sendfile, res.redirect('back'), the '/files/*' wildcard, the ':id?' optional parameter",
+        "Calls out the Node 18 minimum against the Node 16 pin in .nvmrc/engines as a separate runtime item",
+        "Does not modify package.json, the lockfile, .nvmrc or source files"
+      ]
+    },
+    {
+      "id": 5,
+      "environment": "A Context7 MCP server is connected (resolve-library-id and query-docs are in the tool list).",
+      "prompt": "Use context7 to check how to configure retries in the HTTP client library we use.",
+      "expected_output": "Pins httpx 0.28.1 from requirements.txt, resolves the library in Context7 and picks the candidate whose /owner/repo matches httpx's repository (encode/httpx), queries for retries, and confirms against httpx 0.28.1 code that retries is an HTTPTransport argument (connection failures only), not a Client argument. Reports the Context7 ID and confidence.",
+      "files": [
+        "evals/files/httpx-retries/requirements.txt",
+        "evals/files/httpx-retries/app/upstream.py"
+      ],
+      "expectations": [
+        "Calls the Context7 resolve tool and then the docs tool, and names the library ID used",
+        "Chooses an ID that matches httpx's own repository rather than a fork or a same-named project, and uses a version-specific ID only if the resolver listed that version",
+        "Does not pass retries to httpx.Client(...); configures it on httpx.HTTPTransport and says which failures it covers",
+        "Confirms the parameter against httpx 0.28.1 code (installed or fetched) or labels the result documented-only",
+        "Does not paste the internal base URL from upstream.py into the Context7 query"
+      ]
+    },
+    {
+      "id": 6,
+      "environment": "No Context7 MCP server is connected and the ctx7 CLI is not installed.",
+      "prompt": "Use context7 to check how to configure retries in the HTTP client library we use.",
+      "expected_output": "Checks the tool list (and for a ctx7 CLI), says plainly that Context7 is not available, does not pretend to call it, falls back to the versioned httpx docs and the httpx 0.28.1 source, and still pins the version and verifies that retries belongs to HTTPTransport.",
+      "files": [
+        "evals/files/httpx-retries/requirements.txt",
+        "evals/files/httpx-retries/app/upstream.py"
+      ],
+      "expectations": [
+        "States that Context7 is not available in this environment",
+        "Does not claim to have called a Context7 tool and does not download the ctx7 CLI on the fly",
+        "Pins httpx 0.28.1 from requirements.txt",
+        "Does not pass retries to httpx.Client(...); configures it on httpx.HTTPTransport",
+        "Names the sources it used instead (versioned docs URL, fetched or installed httpx source) and gives a Confidence level"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "Make npm test fail when line coverage drops below 80%. Just add it to the vitest config.",
+      "expected_output": "Pins vitest 3.2.4 from package-lock.json, puts the threshold at test.coverage.thresholds.lines (the key used since Vitest 1; the older top-level coverage.lines is not an option in 3.x), confirms the key in vitest 3.2.4's own types (installed, or fetched outside the repo) or the v3 docs, and does not treat a clean run as proof because a plain .js config is not type-checked. Suggests or performs a demonstration such as a temporary threshold of 100 that should fail.",
+      "files": [
+        "evals/files/vitest-coverage/package.json",
+        "evals/files/vitest-coverage/package-lock.json",
+        "evals/files/vitest-coverage/vitest.config.js",
+        "evals/files/vitest-coverage/src/price.js"
+      ],
+      "expectations": [
+        "Pins vitest 3.2.4 from package-lock.json",
+        "Sets the threshold under coverage.thresholds (lines: 80), not as coverage.lines",
+        "Confirms the key against vitest 3.2.4's types or source, or the docs for that major, and says which",
+        "Does not cite 'the run had no error' as proof the key is read; proposes or runs a check that shows the threshold taking effect",
+        "Runs any vitest command without a downloading runner (npx --no --, npm test, or ./node_modules/.bin), or does not run one"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "In packages/api, validate the signup payload with zod: email, a password of at least 12 characters, and an optional displayName. Return friendly error messages.",
+      "expected_output": "Resolves zod for packages/api to 4.1.5 from the nested packages/api/node_modules/zod lock entry, not the root 3.23.8 that packages/web uses, and writes zod 4 code (for example z.email() rather than the deprecated z.string().email(), and v4 error customization). Does not copy the v3 patterns from packages/web/src/forms/contact.ts unexamined.",
+      "files": [
+        "evals/files/monorepo-zod/package.json",
+        "evals/files/monorepo-zod/package-lock.json",
+        "evals/files/monorepo-zod/packages/api/package.json",
+        "evals/files/monorepo-zod/packages/api/src/routes/signup.ts",
+        "evals/files/monorepo-zod/packages/web/package.json",
+        "evals/files/monorepo-zod/packages/web/src/forms/contact.ts"
+      ],
+      "expectations": [
+        "Reports zod 4.1.5 for packages/api and cites the packages/api/node_modules/zod lockfile entry",
+        "Does not report the root 3.23.8 as the version for this change",
+        "Avoids APIs that are deprecated in zod 4.1.5 (such as z.string().email()) or names the deprecation if it uses one",
+        "Confirms the APIs against zod 4.1.5 code (installed or fetched) or labels the result documented-only",
+        "Does not change packages/web or either package.json"
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "We want to serve markdown pages with YAML front matter from this service. Add whatever library we need to parse the front matter.",
+      "expected_output": "Checks package-lock.json for something already present, then confirms a candidate package on the npm registry (exact name, repository URL, deprecated flag, first publish date) before proposing it, picks a release compatible with the project's Node pin, and asks before installing or editing package.json.",
+      "files": [
+        "evals/files/express4/.nvmrc",
+        "evals/files/express4/package.json",
+        "evals/files/express4/package-lock.json",
+        "evals/files/express4/src/server.js"
+      ],
+      "expectations": [
+        "Checks the lockfile for an existing package that already covers the need before proposing a new one",
+        "Confirms the proposed package on the registry (for example npm view with repository.url, deprecated and time fields) and reports what it found",
+        "Checks the candidate release against the Node 16 runtime pin",
+        "Does not run npm install or edit package.json/package-lock.json without the user's go-ahead",
+        "Records the choice in the Docs check block"
+      ]
+    }
+  ]
+}

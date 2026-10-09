@@ -1,0 +1,172 @@
+# Publishes a GitHub Release when a version tag is pushed:
+#
+#   git tag -a v1.2.0 -m "v1.2.0" && git push origin v1.2.0
+#
+# Before it publishes anything it checks that the tree validates, that every plugin.json and
+# every marketplace entry carries the tag's version, and that CHANGELOG.md has a section for
+# that version (`## [1.2.0] - 2026-10-09`, `## 1.2.0` and `## v1.2.0` all match). That section
+# becomes the release notes. A release tag must point at a commit on the default branch, because
+# marketplace users track that branch. A tag with a pre-release suffix (v1.2.0-rc.1) is published
+# as a pre-release and is exempt from that check: it is cut from a short-lived branch that is never
+# merged (docs/maintainers.md). Re-running the workflow for a tag that already has a release
+# updates its notes.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Publish the GitHub Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # create or edit the release
+    env:
+      TAG: ${{ github.ref_name }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # the default branch's history, for the ancestry check below
+
+      - name: Validate the tree
+        run: |
+          python3 -I -B scripts/validate_skills.py --selftest
+          python3 -I -B scripts/validate_skills.py
+
+      - name: Check every version matches the tag
+        id: version
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          if ! printf '%s\n' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "::error::Tag '$TAG' is not v<major>.<minor>.<patch> with an optional -<pre-release> suffix."
+            exit 1
+          fi
+
+          failed=0
+          for dir in plugins/*/; do
+            manifest="${dir}.claude-plugin/plugin.json"
+            if [ ! -f "$manifest" ]; then
+              echo "::error file=$manifest::Missing; every plugin needs a plugin.json with a version."
+              failed=1
+              continue
+            fi
+            found=$(jq -r '.version // ""' "$manifest")
+            if [ "$found" != "$version" ]; then
+              echo "::error file=$manifest::version is '$found', but the tag is $TAG."
+              failed=1
+            fi
+          done
+
+          marketplace=.claude-plugin/marketplace.json
+          meta=$(jq -r '.metadata.version // ""' "$marketplace")
+          if [ -n "$meta" ] && [ "$meta" != "$version" ]; then
+            echo "::error file=$marketplace::metadata.version is '$meta', but the tag is $TAG."
+            failed=1
+          fi
+          tab=$(printf '\t')
+          while IFS="$tab" read -r name found; do
+            if [ "$found" != "$version" ]; then
+              echo "::error file=$marketplace::The '$name' entry has version '$found', but the tag is $TAG."
+              failed=1
+            fi
+          done < <(jq -r '.plugins[] | [.name, (.version // "")] | @tsv' "$marketplace")
+
+          if [ "$failed" -ne 0 ]; then
+            echo "Bump every plugin.json and marketplace entry to $version, merge that, and tag the merged commit."
+            exit 1
+          fi
+          echo "All plugin and marketplace versions are $version."
+          case "$version" in
+            *-*) echo "prerelease=true" >> "$GITHUB_OUTPUT" ;;
+            *) echo "prerelease=false" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      - name: Check the tag is on the default branch
+        env:
+          PRERELEASE: ${{ steps.version.outputs.prerelease }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          if [ "$PRERELEASE" = true ]; then
+            echo "$TAG is a pre-release; it may sit on a branch that is never merged."
+            exit 0
+          fi
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" "origin/$DEFAULT_BRANCH"; then
+            echo "::error::$TAG points at $GITHUB_SHA, which is not on $DEFAULT_BRANCH. Marketplace users track $DEFAULT_BRANCH, so merge the release pull request first, then tag the merged commit."
+            exit 1
+          fi
+          echo "$TAG is on $DEFAULT_BRANCH."
+
+      - name: Extract the release notes from CHANGELOG.md
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          notes="$RUNNER_TEMP/release-notes.md"
+          if [ ! -f CHANGELOG.md ]; then
+            echo "::error::CHANGELOG.md is missing."
+            exit 1
+          fi
+          # Print the body of the first "## " heading whose version is exactly $version
+          # (brackets and a leading v are optional), up to the next "## " heading. Link
+          # reference lines ("[1.2.0]: https://...") and surrounding blank lines are dropped.
+          awk -v ver="$version" '
+            /^## / {
+              if (found) exit
+              heading = $0
+              sub(/^##[ \t]+/, "", heading)
+              sub(/^\[/, "", heading)
+              sub(/^v/, "", heading)
+              if (index(heading, ver) == 1) {
+                next_char = substr(heading, length(ver) + 1, 1)
+                if (next_char == "" || next_char == "]" || next_char == " " || next_char == "\t") found = 1
+              }
+              next
+            }
+            found && /^\[[^]]*\]:[ \t]/ { next }
+            found {
+              if ($0 ~ /[^ \t]/) {
+                for (i = 0; i < blank; i++) print ""
+                blank = 0
+                started = 1
+                print
+              } else if (started) {
+                blank++
+              }
+            }
+          ' CHANGELOG.md > "$notes"
+          if ! grep -q '[^[:space:]]' "$notes"; then
+            echo "::error file=CHANGELOG.md::No section (or an empty one) for $version. Add a '## [$version] - YYYY-MM-DD' section."
+            exit 1
+          fi
+          echo "Release notes:"
+          cat "$notes"
+
+      - name: Create or update the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PRERELEASE: ${{ steps.version.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+          notes="$RUNNER_TEMP/release-notes.md"
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "A release for $TAG already exists; updating its title and notes."
+            gh release edit "$TAG" --title "$TAG" --notes-file "$notes"
+          elif [ "$PRERELEASE" = true ]; then
+            gh release create "$TAG" --verify-tag --title "$TAG" --notes-file "$notes" --prerelease
+          else
+            gh release create "$TAG" --verify-tag --title "$TAG" --notes-file "$notes"
+          fi

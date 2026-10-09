@@ -1,0 +1,29 @@
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.site-header__logo {
+  font-family: "Poppins", sans-serif;
+  font-size: 22px;
+  color: #111827;
+}
+
+.site-header__nav a {
+  margin-left: 24px;
+  color: #6b7280;
+  font-size: 15px;
+  text-decoration: none;
+}
+
+.site-header__nav a:hover {
+  color: #2563eb;
+}
+
+.site-header__nav a[aria-current="page"] {
+  color: #2463eb;
+}

@@ -1,0 +1,131 @@
+{
+  "skill_name": "debug-root-cause",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Our CI fails maybe one run in ten on test_transfer_updates_both_balances. Locally it almost always passes. Here's the code under test:\n\n```python\nimport threading\n\nclass Account:\n    def __init__(self, balance):\n        self.balance = balance\n\ndef transfer(src, dst, amount):\n    if src.balance >= amount:\n        new_src = src.balance - amount\n        new_dst = dst.balance + amount\n        src.balance = new_src\n        dst.balance = new_dst\n\n# test: 50 threads each transfer 1 from a (balance 50) to b (balance 0); assert a.balance == 0 and b.balance == 50\n```\n\nA teammate wants to add `@pytest.mark.flaky(reruns=3)`. Can you figure out what's actually going on and fix it properly?",
+      "expected_output": "Identifies an unsynchronized read-modify-write (lost update) and check-then-act race across threads as the root cause, explains the interleaving that loses an update, rejects reruns/sleeps as hiding the race, proposes an atomic fix (a lock covering the check and both writes, with consistent lock ordering if per-account locks are used), writes a regression test that forces or amplifies the interleaving and fails before the fix, and reports using the root-cause template.",
+      "files": [],
+      "expectations": [
+        "Names the lost-update / check-then-act race between threads as the root cause, with the specific interleaving",
+        "Explicitly argues against the rerun decorator (or any sleep/retry) as a fix",
+        "The fix makes the check and both balance updates atomic (lock or equivalent), and addresses lock ordering if it introduces per-account locks",
+        "Proposes or writes a regression test that fails against the original code (forced interleaving, barrier, or measured stress loop)",
+        "States how many passing runs are needed to trust the fix, based on the observed ~10% failure rate (about 30)",
+        "Output includes a causal chain and a verification section"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "CSV export produced correct totals in v1.4.0 but in v1.6.2 the totals row is off for some files. There are about 400 commits between the two tags and the lockfile changed a few times in between. How do I find which commit broke it? The repo has a Makefile with `make install` and `make test`.",
+      "expected_output": "Recommends git bisect between the tags with an automated `git bisect run` check: a minimal repro script that lives outside the repository, a build step that reinstalls dependencies per revision (because the lockfile changes), failures-to-build mapped to skip (exit 125), verifying the good and bad endpoints first, running in a separate worktree, then confirming the culprit (parent passes, culprit fails) and still proving the causal mechanism before fixing.",
+      "files": [],
+      "expectations": [
+        "Uses git bisect start with the bad and good tags, and git bisect run with a script",
+        "Places the repro check outside the repository or otherwise addresses the check not existing at older revisions",
+        "Reinstalls dependencies per revision (e.g. make install in the build step) because the lockfile changes",
+        "Maps build failures to exit code 125 (skip) rather than bad, and correctly states the exit-code meanings",
+        "Says to verify the good endpoint passes and the bad endpoint fails before bisecting, and to confirm the culprit commit afterwards, since bisect finds where behavior changed, not automatically the root cause",
+        "Does not invent git flags; every git command shown is real"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Getting this in prod on the order endpoint. Quick fix is to null-check `customer` in OrderMailer right? \n\n```\norg.springframework.web.util.NestedServletException: Request processing failed\n  at ...\nCaused by: java.lang.IllegalStateException: Failed to send confirmation\n  at com.acme.orders.OrderService.place(OrderService.java:88)\nCaused by: java.lang.NullPointerException: Cannot invoke \"Customer.getEmail()\" because \"customer\" is null\n  at com.acme.orders.OrderMailer.confirm(OrderMailer.java:31)\n  at com.acme.orders.OrderService.place(OrderService.java:85)\n```\n\nOrderService.place loads the customer with `customerRepo.findByExternalId(req.customerRef())`. It started after yesterday's deploy which added guest checkout.",
+      "expected_output": "Reads the full chained trace down to the innermost NullPointerException, treats the null check at the mailer as a symptom patch, frames hypotheses about why the customer lookup returns null (guest checkout requests with no or unmatched customerRef), proposes cheap discriminating experiments (inspect failing requests' customerRef, check the guest checkout diff), requires a regression test reproducing a guest order, fixes the contract at the source (explicit guest handling or validation at the boundary), and searches for other code paths that assume a non-null customer.",
+      "files": [],
+      "expectations": [
+        "Identifies the innermost 'Caused by' NullPointerException as the real failure, not the wrapper exceptions",
+        "Rejects the mailer null check as a symptom fix and explains why (the null originates upstream)",
+        "Forms a specific hypothesis linking the guest-checkout change to a null customer lookup, and proposes a cheap experiment to confirm it",
+        "Proposes a regression test (e.g. placing a guest order) that fails before the fix",
+        "Suggests searching for sibling code paths that assume a non-null customer",
+        "Does not claim the root cause is proven without evidence; distinguishes hypothesis from proof"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Our Node.js API's memory climbs from about 400 MB to 2.5 GB over roughly six hours, then Kubernetes restarts the pod with exit code 137. The heap graph is a sawtooth that keeps trending up. Last sprint we added an in-memory cache for user profiles. Ops wants to just raise the memory limit to 4 GB. What's actually going on, and how do we fix it?",
+      "expected_output": "Confirms the restart is an OOM kill (OOMKilled / exit 137) and treats raising the limit or scheduled restarts as a labeled mitigation, not the fix. Separates warm-up to a plateau from a real leak by driving a steady workload and watching post-GC heap and RSS. Takes two or three heap snapshots after GC, diffs them for types growing in proportion to the work, and follows a leaked object's retainer path. Treats the new profile cache as a hypothesis to test, not a conclusion. Fixes the retention (a size limit, LRU, or TTL on the cache, or whatever the retainer path shows) and adds a count-based regression test.",
+      "files": [],
+      "expectations": [
+        "Identifies exit 137 as a SIGKILL, most likely the OOM killer or container limit, and says how to confirm it (e.g. kubectl describe pod showing OOMKilled)",
+        "Treats raising the memory limit or restarting on a schedule as a mitigation, labeled as such, not as the fix",
+        "Distinguishes a real leak from warm-up or lazy GC by measuring post-GC heap (or RSS) under a steady, repeated workload",
+        "Uses heap snapshot comparison (two or more snapshots after GC) and follows the retainer path of a leaked object, with Node-specific tooling (DevTools, --inspect, --heapsnapshot-signal, or v8.writeHeapSnapshot)",
+        "Treats the unbounded profile cache as a hypothesis to confirm with evidence, not as a proven cause",
+        "Proposes a fix that bounds or releases the retention (size limit, LRU, TTL, or unregistering) and a regression test that asserts a count (such as cache entries) returns to or stays under a bound, not raw bytes"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "PDF invoices render fine on every developer laptop, but in production the accented characters (é, ñ, ü) come out as empty boxes. The deployed commit SHA is the same one we run locally. Production runs our Docker image on Linux; developers run the app directly on macOS. Can you find the cause?",
+      "expected_output": "Proves the build really is the same (image digest or artifact checksum, not just the SHA), lists the environment differences that matter for text rendering (installed fonts, locale and encoding settings, base image, OS, library versions), captures a fingerprint on both sides and diffs it, reproduces by running the production image locally, and converges one variable at a time until the behavior flips. Treats the flip as the trigger, then explains the root cause (for example the image lacks a font with those glyphs, or a locale or encoding default differs) and fixes it in the image or configuration with a check that fails if the fonts or encoding are wrong.",
+      "files": [],
+      "expectations": [
+        "Verifies the artifact is actually the same (image digest, build ID, or checksum), not only the commit SHA",
+        "Lists concrete environment differences relevant to rendering text, including installed fonts and locale or encoding, and the base image",
+        "Proposes capturing a fingerprint on both sides and diffing it",
+        "Reproduces by running the production Docker image locally rather than reasoning only about the laptop",
+        "Changes one environment variable at a time (converge) rather than several at once",
+        "Distinguishes the trigger (what flips the behavior) from the root cause, and fixes the cause in the image or configuration with a check or test that would catch a recurrence"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "After we upgraded our ORM from 4.x to 5.x, the /orders page went from about 300 ms to about 2 s. As far as we know nothing else changed in that release. How do we find out why, and make sure it doesn't come back?",
+      "expected_output": "Defines the metric and workload, measures old and new builds back to back on the same machine with warm-up and repeated runs, and runs an A/A comparison to learn the noise floor. Profiles both versions and compares them, and counts queries per request early, since an ORM upgrade commonly changes loading defaults (lazy versus eager, batching) and produces N+1 queries. Checks the upgrade notes for changed defaults. Proves the mechanism before changing code, fixes it, confirms the metric returns to baseline within noise, and adds a deterministic guard such as a query-count assertion rather than a wall-clock threshold in a unit test.",
+      "files": [],
+      "expectations": [
+        "Measures both versions under the same conditions with repeated runs and reports a median or distribution, not a single number",
+        "Establishes the noise floor (an A/A comparison or run-to-run spread) before treating a difference as real",
+        "Profiles or traces both versions and compares where the time goes",
+        "Counts database queries (or round trips) per request on both versions, naming N+1 or changed loading defaults as a hypothesis to test",
+        "Checks the ORM's upgrade notes or changelog for changed defaults",
+        "Adds a deterministic regression guard (such as asserting the number of queries per request) and explicitly avoids a wall-clock assertion in an ordinary unit test"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "Our Java integration test suite hangs about once every 30 runs, locally and in CI. No error and no output: it just sits there until something kills it. The service uses a fixed thread pool and a couple of synchronized blocks. Someone suggested raising the test timeout and adding a retry. What should we do instead?",
+      "expected_output": "Rejects raising the timeout or retrying as hiding the defect. Loops the reproduction with a per-run timeout so a hang is detected in minutes rather than waiting for an outer kill, and captures a thread dump of the stuck JVM before killing it (jcmd PID Thread.print, jstack, or kill -QUIT). Reads the dump for a lock-order deadlock (reported at the end of the dump) or for thread pool starvation, where every worker waits on a task queued behind it in the same pool. Fixes the ordering or the blocking pattern, adds a regression test that forces the interleaving or proves the invariant, and uses the observed rate with a conservative bound to choose how many passing runs prove the fix.",
+      "files": [],
+      "expectations": [
+        "Rejects raising the timeout or adding a retry as a fix, and says why (it hides the deadlock or starvation)",
+        "Uses a per-run timeout when looping the reproduction (for example repeat-run.sh -t) so a hung run is detected and logged instead of blocking",
+        "Captures a thread dump of the hung process before it is killed (jcmd Thread.print, jstack, or kill -QUIT), for example via repeat-run.sh -d",
+        "Names lock-order deadlock and thread pool starvation as the leading hypotheses and explains how the thread dump distinguishes them",
+        "Proposes a fix that removes the cause (consistent lock order, narrower lock scope, or not blocking pool threads on work queued to the same pool)",
+        "States how many consecutive passing runs are needed given a failure rate of about 1 in 30, using a conservative estimate (well over 90 runs)"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "A customer says they were charged twice for one order last Tuesday around 14:05 UTC. We can't reproduce it, every test passes, and our application logs from that day have rotated out. The payment provider's dashboard shows two successful charges for the same amount, 800 ms apart. Can you find the root cause?",
+      "expected_output": "Does not claim a proven root cause. Reports the status as not yet proven, lists the leading hypotheses (double submission from the client, a client or server retry after a timeout, duplicate message delivery, an idempotency key generated per attempt instead of per order), and says what evidence would tell them apart. Names the specific facts to collect next (the two charges' metadata and idempotency keys, request or correlation IDs, client and app version, gateway or load balancer logs), proposes instrumentation and log retention so the next occurrence is captured, and suggests experiments such as simulating a timeout followed by a retry against the provider's sandbox. Any change suggested before proof is labeled as a mitigation or hardening.",
+      "files": [],
+      "expectations": [
+        "Does not present any cause as proven; the report status says not yet proven (or equivalent)",
+        "Lists at least three concrete hypotheses, such as double submit, retry after timeout, duplicate message delivery, or a per-attempt idempotency key",
+        "For each hypothesis, says what evidence or experiment would confirm or rule it out",
+        "Asks for or names the specific missing facts (both charges' details or idempotency keys, request IDs, client version, edge or gateway logs)",
+        "Proposes targeted instrumentation or longer log retention so the next occurrence is captured",
+        "Labels any change made before the cause is proven as a mitigation or defensive hardening, not as the root-cause fix"
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "Our C++ image-resizing service crashes with exit code 139 in production about once an hour, but only in the release build (-O2). Debug builds have run for days without a crash. The logs show nothing but 'Segmentation fault'. A teammate wants to ship the -O0 build to make it stop.",
+      "expected_output": "Decodes exit 139 as SIGSEGV. Gets a real backtrace: enables and collects core dumps (ulimit -c, coredumpctl) and reads every thread's stack in gdb, from a build with debug symbols at the same -O2 level. Explains that a release-only crash almost always means undefined behavior or a data race rather than a compiler bug, reproduces under AddressSanitizer and UBSan at -O2 with frame pointers, and runs ThreadSanitizer in a separate build since the service is multithreaded. Rejects shipping -O0 or a null check at the crash site as hiding the defect. Fixes the code the sanitizer points at, adds a regression test with the triggering input, and verifies sanitizer-clean runs plus repeated stress runs.",
+      "files": [],
+      "expectations": [
+        "Decodes exit code 139 as SIGSEGV (128 + 11)",
+        "Collects a core dump or runs under a debugger to get a full backtrace of all threads (e.g. ulimit -c unlimited, coredumpctl, gdb bt / thread apply all bt)",
+        "Builds with debug symbols at the same optimization level (-O2 -g) so the trace resolves, rather than switching to a debug build",
+        "Explains that an -O2-only crash usually means undefined behavior or a data race, not a compiler bug",
+        "Reproduces with AddressSanitizer and UndefinedBehaviorSanitizer at -O2, and ThreadSanitizer in a separate build",
+        "Rejects shipping -O0 or adding a null check at the crash site as the fix, and treats either as at most a labeled mitigation"
+      ]
+    }
+  ]
+}

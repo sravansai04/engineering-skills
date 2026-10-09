@@ -1,0 +1,306 @@
+# Checks every pull request and every push to main.
+#
+# Jobs:
+#   validator        scripts/validate_skills.py: its own self-test, then the whole repository;
+#                    then the repository's own shell scripts (shellcheck, setup_labels.sh --dry-run).
+#   script-selftests every bundled skill script's --selftest, on Linux and on macOS (macOS runs
+#                    shell scripts with /bin/bash 3.2, the bash most Macs still ship). A bundled
+#                    script without a --selftest fails the job.
+#   plugin-validate  `claude plugin validate --strict` on the marketplace and on each plugin.
+#   actionlint       lints the workflow files themselves.
+#
+# Versions that Dependabot cannot see live in the `env:` blocks below (actionlint, the
+# Claude Code CLI, Playwright). Bump them by hand and update the checksum next to each one.
+
+name: Validate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# A new push to a pull request cancels the run it supersedes. On main, runs finish one at a
+# time instead, so every merged commit keeps its own result; only queued runs get replaced.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  validator:
+    name: Repository validator
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The denylist scan is skipped here on purpose. Its term list must never be published,
+      # and anything this job prints is public, so that scan only runs on contributors'
+      # machines (see CONTRIBUTING.md).
+      - name: Self-test the validator
+        run: |
+          python3 --version
+          python3 -I -B scripts/validate_skills.py --selftest
+
+      - name: Validate skills and manifests
+        run: python3 -I -B scripts/validate_skills.py
+
+      # shellcheck is preinstalled on GitHub's Ubuntu runners. The dry run checks the label
+      # table (colors, lengths, duplicates) without calling GitHub.
+      - name: Check the repository scripts
+        run: |
+          shellcheck --version
+          shellcheck scripts/*.sh
+          bash scripts/setup_labels.sh --dry-run > /dev/null
+
+  script-selftests:
+    name: Script self-tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    env:
+      PLAYWRIGHT_VERSION: "1.64.0"
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # A script counts as having a self-test when its source handles --selftest as an
+      # option: a quoted '--selftest' literal (argparse, argv checks) or a shell case arm
+      # (`--selftest)`). A bare mention in an example does not count. The runtime comes from
+      # the extension, or from the shebang when there is none.
+      - name: Find scripts with a self-test
+        id: discover
+        shell: bash
+        run: |
+          set -euo pipefail
+          list="$RUNNER_TEMP/selftests.tsv"
+          : > "$list"
+          needs_node=false
+          needs_playwright=false
+          missing=""
+          for f in plugins/*/skills/*/scripts/*; do
+            [ -f "$f" ] || continue
+            case "$f" in
+              *.py) runtime="python" ;;
+              *.sh|*.bash) runtime="bash" ;;
+              *.mjs|*.cjs|*.js) runtime="node" ;;
+              *)
+                first_line=$(head -n 1 "$f" 2>/dev/null || true)
+                case "$first_line" in
+                  '#!'*python*) runtime="python" ;;
+                  '#!'*bash*) runtime="bash" ;;
+                  '#!'*node*) runtime="node" ;;
+                  '#!'*sh) runtime="sh" ;;
+                  *) continue ;;
+                esac
+                ;;
+            esac
+            if grep -Eq -e "[\"'\`]--selftest[\"'\`]" -e '(^|[[:space:]|(])--selftest[[:space:]]*[|)]' "$f"; then
+              printf '%s\t%s\n' "$runtime" "$f" >> "$list"
+              if [ "$runtime" = node ]; then
+                needs_node=true
+                if grep -qi 'playwright' "$f"; then needs_playwright=true; fi
+              fi
+            else
+              echo "::error file=$f::No --selftest found. CONTRIBUTING.md requires every bundled script to have one."
+              missing="$missing $f"
+            fi
+          done
+          echo "Scripts with a self-test:"
+          cat "$list"
+          {
+            echo "needs-node=$needs_node"
+            echo "needs-playwright=$needs_playwright"
+            echo "missing=${missing# }"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Set up Node.js
+        if: steps.discover.outputs.needs-node == 'true'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      # Browser-driving scripts load Playwright from the current directory, the way they do
+      # in a user's project, so node self-tests run from a scratch directory that has it.
+      - name: Install Playwright and Chromium
+        if: steps.discover.outputs.needs-playwright == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/node-selftest"
+          mkdir -p "$dir"
+          cd "$dir"
+          npm init -y > /dev/null
+          npm install --no-fund --no-audit "playwright@${PLAYWRIGHT_VERSION}"
+          if [ "$RUNNER_OS" = Linux ]; then
+            ./node_modules/.bin/playwright install --with-deps chromium
+          else
+            ./node_modules/.bin/playwright install chromium
+          fi
+
+      - name: Run self-tests
+        shell: bash
+        run: |
+          set -uo pipefail
+          # macOS: use the system /bin/bash (3.2), not a newer Homebrew bash on PATH,
+          # so scripts are tested against the bash a typical Mac actually has.
+          if [ "$RUNNER_OS" = macOS ]; then bash_bin=/bin/bash; else bash_bin=bash; fi
+          echo "bash:    $("$bash_bin" --version | head -n 1)"
+          echo "python3: $(python3 --version 2>&1)"
+          if command -v node > /dev/null; then echo "node:    $(node --version)"; fi
+          # Some shell scripts need jq; GitHub's Ubuntu and macOS images ship it.
+          if command -v jq > /dev/null; then echo "jq:      $(jq --version)"; fi
+
+          scratch="$RUNNER_TEMP/selftest-cwd"
+          node_cwd="$RUNNER_TEMP/node-selftest"
+          mkdir -p "$scratch" "$node_cwd"
+
+          total=0
+          failed=""
+          tab=$(printf '\t')
+          while IFS="$tab" read -r runtime f; do
+            [ -n "$f" ] || continue
+            total=$((total + 1))
+            script="$GITHUB_WORKSPACE/$f"
+            cwd="$scratch"
+            case "$runtime" in
+              python) set -- python3 -I -B "$script" --selftest ;;
+              bash)   set -- "$bash_bin" "$script" --selftest ;;
+              sh)     set -- sh "$script" --selftest ;;
+              node)   set -- node "$script" --selftest; cwd="$node_cwd" ;;
+              *)      echo "::error file=$f::unknown runtime '$runtime'"; failed="$failed $f"; continue ;;
+            esac
+            echo "::group::$f"
+            ( cd "$cwd" && "$@" < /dev/null )
+            status=$?
+            echo "::endgroup::"
+            if [ "$status" -ne 0 ]; then
+              echo "::error file=$f::self-test exited with status $status"
+              failed="$failed $f"
+            else
+              echo "ok  $f"
+            fi
+          done < "$RUNNER_TEMP/selftests.tsv"
+
+          if [ "$total" -eq 0 ]; then
+            echo "::notice::No bundled script has a --selftest yet."
+          fi
+          if [ -n "$failed" ]; then
+            echo "Failed self-tests:$failed"
+            exit 1
+          fi
+          echo "All $total self-tests passed."
+
+      - name: Require a self-test in every bundled script
+        if: steps.discover.outputs.missing != ''
+        env:
+          MISSING: ${{ steps.discover.outputs.missing }}
+        run: |
+          echo "Bundled scripts with no --selftest: $MISSING"
+          echo "Add a --selftest option to each one (see CONTRIBUTING.md, Layout)."
+          exit 1
+
+  # `claude plugin validate` reads manifests and component files only. It needs no login,
+  # API key or network access once installed, so it runs unauthenticated (checked against
+  # a clean HOME with no credentials in the environment).
+  plugin-validate:
+    name: claude plugin validate --strict
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # Pinned so a new CLI release cannot turn an unrelated pull request red. Bump it on
+      # purpose: https://www.npmjs.com/package/@anthropic-ai/claude-code
+      CLAUDE_CODE_VERSION: "2.1.295"
+      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      # The package's postinstall step links the native binary into place, so install
+      # scripts must run (--ignore-scripts leaves a stub that refuses to start).
+      - name: Install the Claude Code CLI
+        run: |
+          npm install --global --no-fund --no-audit "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}"
+          claude --version
+
+      - name: Validate the marketplace
+        run: claude plugin validate . --strict
+
+      - name: Validate each plugin
+        shell: bash
+        run: |
+          set -uo pipefail
+          failed=""
+          for dir in plugins/*/; do
+            echo "::group::${dir%/}"
+            claude plugin validate "$dir" --strict
+            status=$?
+            echo "::endgroup::"
+            if [ "$status" -ne 0 ]; then
+              echo "::error::claude plugin validate failed for ${dir%/}"
+              failed="$failed ${dir%/}"
+            fi
+          done
+          if [ -n "$failed" ]; then
+            echo "Failed:$failed"
+            exit 1
+          fi
+
+  actionlint:
+    name: actionlint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      ACTIONLINT_VERSION: "1.7.12"
+      # SHA-256 of actionlint_<version>_linux_amd64.tar.gz, from the release's checksums file.
+      ACTIONLINT_SHA256: "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The same release binary the upstream download script fetches, pinned by version and
+      # verified against a known checksum before it runs.
+      - name: Download actionlint
+        run: |
+          set -euo pipefail
+          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/$archive" \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${archive}"
+          echo "${ACTIONLINT_SHA256}  $RUNNER_TEMP/$archive" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" -version
+
+      # shellcheck is preinstalled on Ubuntu runners; actionlint finds it on PATH and uses it
+      # to check every `run:` script.
+      - name: Lint workflow files
+        run: |
+          shellcheck --version
+          if ! "$RUNNER_TEMP/actionlint" -color; then
+            # Run once more to turn each finding into an annotation on the changed file.
+            # $err is actionlint template syntax, not a shell variable, and actionlint itself
+            # turns the \n into a newline.
+            # shellcheck disable=SC2016
+            "$RUNNER_TEMP/actionlint" -format '{{range $err := .}}::error file={{$err.Filepath}},line={{$err.Line}},col={{$err.Column}}::[{{$err.Kind}}] {{$err.Message}}\n{{end}}' || true
+            exit 1
+          fi

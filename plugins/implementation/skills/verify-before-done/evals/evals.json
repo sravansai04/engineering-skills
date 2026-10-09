@@ -1,0 +1,84 @@
+{
+  "skill_name": "verify-before-done",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I just finished adding a --json flag to the `list` command in our Node CLI. Set up the repo with `bash evals/files/node-cli-json/setup.sh /tmp/node-cli-json` (my work is uncommitted on top of main). Before I open the PR, can you make sure everything is actually good?",
+      "expected_output": "Discovers the check command from package.json (npm test) and runs it, quoting the counts (2 passed, 1 skipped) instead of calling it green. Runs the real CLI (bin/tool.js list --json) against examples/demo and examples/empty and finds that a leftover console.log in src/commands/list.js writes 'DEBUG formatList N' to stdout, so --json output is not valid JSON, and that an empty list prints an empty line instead of []. Notices the test.skip in test/list.test.js hides exactly that empty-list bug. Runs scan-diff.sh, which flags both the debug line and the skip. Notes the README usage section was not updated for --json. Either reports Not done with these findings, or fixes them and then reruns tests, the CLI exercise and scan-diff after the last edit (Final gate) before reporting.",
+      "files": [
+        "evals/files/node-cli-json/setup.sh",
+        "evals/files/node-cli-json/base/package.json",
+        "evals/files/node-cli-json/base/README.md",
+        "evals/files/node-cli-json/base/bin/tool.js",
+        "evals/files/node-cli-json/base/src/cli.js",
+        "evals/files/node-cli-json/base/src/commands/list.js",
+        "evals/files/node-cli-json/base/test/list.test.js",
+        "evals/files/node-cli-json/base/examples/demo/items.json",
+        "evals/files/node-cli-json/base/examples/empty/items.json",
+        "evals/files/node-cli-json/change/src/cli.js",
+        "evals/files/node-cli-json/change/src/commands/list.js",
+        "evals/files/node-cli-json/change/test/list.test.js"
+      ],
+      "expectations": [
+        "Runs npm test (or node --test) and reports the skipped test rather than an unqualified pass, connecting the test.skip in test/list.test.js to the empty-list bug it hides",
+        "Runs the built CLI with --json on real input and observes that the output is not valid JSON because of the DEBUG line on stdout",
+        "Exercises the empty-list edge case and observes an empty line instead of []",
+        "Runs scan-diff.sh (or reviews the full diff) and reports the console.log and the skip, and flags that the README usage section does not mention --json",
+        "Does not report status Done while the debug line, the skip or the empty-list bug remain; if it fixes them, it reruns tests, the CLI exercise and scan-diff after the last edit",
+        "Ends with the verification report: status on the first line, Verified state and Base lines, and an explicit Not verified section"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Wrap this up: I added a HealthController with a /healthz endpoint to our Node HTTP service, plus a unit test for it. The repo is created by `bash evals/files/http-healthz/setup.sh /tmp/http-healthz`. Are we done?",
+      "expected_output": "Runs npm test (2 passed) but does not stop there. Searches for references including untracked files (git grep --untracked or rg) and finds that healthz is referenced only by its own definition and test. Checks src/routes.js, the service's registration point, and sees no 'GET /healthz' entry. Starts the server on a free port, waits for readiness, requests /healthz and gets 404 (and /items gets 200 for contrast), then stops the server. Notes the new files are untracked (git status) and that the README route table is not updated. Reports Not done with the wiring gap, or wires the route, reruns tests and re-requests /healthz to get 200 before reporting.",
+      "files": [
+        "evals/files/http-healthz/setup.sh",
+        "evals/files/http-healthz/base/package.json",
+        "evals/files/http-healthz/base/README.md",
+        "evals/files/http-healthz/base/src/server.js",
+        "evals/files/http-healthz/base/src/app.js",
+        "evals/files/http-healthz/base/src/routes.js",
+        "evals/files/http-healthz/base/src/controllers/items.js",
+        "evals/files/http-healthz/base/test/items.test.js",
+        "evals/files/http-healthz/change/src/controllers/health.js",
+        "evals/files/http-healthz/change/test/health.test.js"
+      ],
+      "expectations": [
+        "Searches for callers in a way that includes untracked files and reports only the definition and test reference healthz",
+        "Identifies src/routes.js as the registration point and that /healthz is not registered there",
+        "Starts the server and requests /healthz, observing 404, stops the server afterwards, and points out that a passing unit test of the controller does not prove the endpoint is reachable",
+        "Notes the new files are untracked and would be left out of a commit unless added",
+        "Does not report Done unless the route was wired and /healthz then returned 200 from the running server after the last edit",
+        "Ends with the verification report, including how the new code is reached (or that it is not)"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I fixed the pagination bug where page 2 repeated the last item of page 1. It's committed on the fix-pagination branch and I want to merge it into main. `bash evals/files/py-pagination/setup.sh /tmp/py-pagination` recreates the repo. test_money fails but I'm pretty sure that's not mine. Are we good to merge?",
+      "expected_output": "Runs make test on the branch (5 tests, 1 failure in test_money). Establishes that the failure predates the change by running the same tests at the merge-base of main and the branch (git worktree of the merge-base), where test_money also fails, rather than comparing against main's tip. Notices main has moved since the branch was cut and that main's tip already fixes format_cents, so it recommends (or does) rebasing or merging main and reruns the full suite (5 passed). Proves the regression test test_pages_do_not_overlap fails without the fix by reverting the key line by hand, never with git checkout, restore or stash on the user's work. Exercises paginate on the boundary (last page, page past the end). The report states the base sha it verified against and how the pre-existing failure was established.",
+      "files": [
+        "evals/files/py-pagination/setup.sh",
+        "evals/files/py-pagination/base/Makefile",
+        "evals/files/py-pagination/base/README.md",
+        "evals/files/py-pagination/base/app/__init__.py",
+        "evals/files/py-pagination/base/app/pagination.py",
+        "evals/files/py-pagination/base/app/money.py",
+        "evals/files/py-pagination/base/tests/__init__.py",
+        "evals/files/py-pagination/base/tests/test_pagination.py",
+        "evals/files/py-pagination/base/tests/test_money.py",
+        "evals/files/py-pagination/change/app/pagination.py",
+        "evals/files/py-pagination/change/tests/test_pagination.py",
+        "evals/files/py-pagination/main-later/app/money.py"
+      ],
+      "expectations": [
+        "Runs the project's test command and quotes the counts (1 failure in test_money)",
+        "Shows test_money also fails at the merge-base, with the command used, before calling it pre-existing, and does not use main's current tip as that evidence (it passes there)",
+        "Notices main has moved on and that updating the branch picks up the format_cents fix; reruns the full suite after updating, or reports the branch as behind its target",
+        "Demonstrates the new regression test fails without the fix, restoring the fix by hand rather than with git checkout, restore or stash",
+        "Exercises at least one boundary such as the last partial page or a page past the end",
+        "Status is Done only if the full suite passes after the branch is updated; otherwise Done, with gaps or Not done with the reason"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+[
+  { "name": "alpha", "size": 3 },
+  { "name": "beta \"quoted\" ✨", "size": 5 }
+]

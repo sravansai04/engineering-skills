@@ -1,0 +1,85 @@
+diff --git a/src/components/SortMenu.tsx b/src/components/SortMenu.tsx
+new file mode 100644
+index 0000000..3f1c2a7
+--- /dev/null
++++ b/src/components/SortMenu.tsx
+@@ -0,0 +1,34 @@
++import { useState } from 'react';
++import { ChevronIcon } from './icons';
++
++const OPTIONS = ['Relevance', 'Price: low to high', 'Price: high to low', 'Newest'];
++
++export function SortMenu({ value, onChange }: { value: string; onChange: (v: string) => void }) {
++  const [open, setOpen] = useState(false);
++
++  return (
++    <div className="sort-menu">
++      <div className="sort-trigger" onClick={() => setOpen(!open)}>
++        Sort: {value} <ChevronIcon />
++      </div>
++      {open && (
++        <ul className="sort-options">
++          {OPTIONS.map((option) => (
++            <li
++              key={option}
++              className={option === value ? 'sort-option selected' : 'sort-option'}
++              onClick={() => {
++                onChange(option);
++                setOpen(false);
++              }}
++            >
++              {option}
++            </li>
++          ))}
++        </ul>
++      )}
++    </div>
++  );
++}
++
++export default SortMenu;
+diff --git a/src/components/Toast.tsx b/src/components/Toast.tsx
+index 8a1d0e2..c47b9f1 100644
+--- a/src/components/Toast.tsx
++++ b/src/components/Toast.tsx
+@@ -1,15 +1,12 @@
+ import { useEffect } from 'react';
+ 
+ export function Toast({ message, onDone }: { message: string | null; onDone: () => void }) {
+   useEffect(() => {
+     if (!message) return;
+-    const id = setTimeout(onDone, 8000);
++    const id = setTimeout(onDone, 2500);
+     return () => clearTimeout(id);
+   }, [message, onDone]);
+ 
+-  return (
+-    <div className="toast-region" role="status" aria-live="polite">
+-      {message && <div className="toast">{message}</div>}
+-    </div>
+-  );
++  if (!message) return null;
++  return <div className="toast">{message}</div>;
+ }
+ 
+ export default Toast;
+diff --git a/src/styles/sort-menu.css b/src/styles/sort-menu.css
+new file mode 100644
+index 0000000..d02b6e4
+--- /dev/null
++++ b/src/styles/sort-menu.css
+@@ -0,0 +1,14 @@
++.sort-trigger {
++  cursor: pointer;
++  padding: 4px 8px;
++}
++.sort-trigger:focus {
++  outline: none;
++}
++.sort-option.selected {
++  color: #2563eb;
++}
++.sort-option {
++  color: #111827;
++  cursor: pointer;
++}

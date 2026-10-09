@@ -1,0 +1,118 @@
+{
+  "skill_name": "brainstorm-spec",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I'm thinking about adding some kind of audit trail to our app. Admins keep asking 'who changed this?' and we can never tell them. Help me figure out what we should actually build.",
+      "expected_output": "A short context note from a repo sweep (or an explicit 'greenfield, nothing to sweep') ending with a one-line size call the user can override, then exactly one question, multiple choice with a recommended option, and the turn ends. No plan, no schema, no code.",
+      "files": [],
+      "expectations": [
+        "The response reports what the context sweep found, or states there was nothing to sweep, before asking anything",
+        "The response states a size (Spark, Feature, or Initiative) after the context report and invites an override",
+        "The response asks exactly one question",
+        "The question offers 2-4 concrete, mutually exclusive options and marks one as recommended with a reason",
+        "The response contains no implementation plan, table schema, or code"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Context: we're mid-brainstorm on letting users schedule posts in advance. So far: problem = creators post at bad times because they have to be online; users = creators on mobile; SC1 = a post scheduled up to 30 days ahead publishes within 60 s of its time. Now the user says: 'honestly this is taking too long, just build it.'",
+      "expected_output": "The fast path: a mini-spec in the template's Spark layout (problem, 1-3 success criteria with numbers, non-goals, a two-row approaches table, a requirements table with acceptance checks and Serves, open questions), saved to the spec location and linted, every assumption tagged default, an explicit list of what was skipped, and one confirmation request. No code yet.",
+      "files": [],
+      "expectations": [
+        "The response produces a mini-spec rather than continuing the full question sequence",
+        "The mini-spec has Problem, Success criteria, Non-goals, Approaches (chosen plus one rejected), a Requirements table with Acceptance check and Serves columns, and Open questions",
+        "Running scripts/spec_lint.py on the saved mini-spec reports 0 errors",
+        "Assumptions the user did not state are labeled as defaults",
+        "The response lists what was skipped (for example edge cases or rollout)",
+        "The response asks for one confirmation and does not start writing code or set Status to Approved before the user confirms"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "We've agreed everything for the bulk user import feature: problem = admins add 200+ users by hand during onboarding; users = customer admins; SC1 = 1,000-row CSV imports in under 2 minutes; SC2 = invalid rows are reported with row number and reason and valid rows still import; non-goals = Excel files, SSO provisioning; C1 = emails must stay unique per account; chosen approach = background job with a results page (rejected: synchronous upload, too slow for SC1). Please write up the spec.",
+      "expected_output": "A spec file at docs/specs/YYYY-MM-DD-<topic>.md (or the repo's convention) built from the template, with SC/C ids, a requirements table whose rows each have an acceptance check and a Serves column, every behavior described in the design carried by a requirement row, Status 'In review', a clean linter run, a short self-review report, and a request for explicit approval.",
+      "files": [],
+      "expectations": [
+        "A spec file is written under docs/specs/ (or an existing repo convention) with a date-prefixed kebab-case name",
+        "Running scripts/spec_lint.py on the file reports 0 errors",
+        "Every requirement row has a given/when/then style acceptance check and cites SC or C ids in a Serves column",
+        "Every behavior the design section describes (for example duplicate-email handling for C1 or the results page) has a matching requirement row",
+        "The spec's Status is 'In review' with 'Approved by / on' pending, and the response asks the user to approve or request changes without starting a plan",
+        "The response includes a self-review summary and flags any requirement added that the user did not state"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Context: mid-brainstorm on 'customers want to know when their order ships'. Ledger is complete: problem = 30% of support tickets are 'where is my order?'; users = shoppers, mostly on phones; SC1 = shoppers are told within 15 minutes of the carrier scan; SC2 (outcome) = 'where is my order' tickets fall from 30% to under 10% of volume; C1 = no new paid vendors this year; the shop already sends order-confirmation email through its mailer and the carrier offers scan webhooks. Scope cuts are confirmed. Next step, please.",
+      "expected_output": "Step 4: two or three approaches that differ on a named axis, including the smallest option and, where credible, a do-not-build option (for example a tracking link in the existing confirmation email); a comparison table with cost, main risk, reversibility and the SC/C ids each meets or misses; a three-part recommendation; then the turn ends waiting for the user's choice.",
+      "files": [],
+      "expectations": [
+        "The response names the axis the options differ on, and the options are not variants of one idea",
+        "At least one option is the smallest thing that could meet the criteria or a no-new-software option",
+        "A comparison table lists, for each option, which SC/C ids it meets and which it misses",
+        "The recommendation names the pick, the deciding reason tied to ids, and what would change the recommendation",
+        "The response ends by asking the user to choose and contains no design section, plan, or code"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Context: mid-brainstorm on offline note editing for a field app. Purpose, users and two success criteria are agreed; the next question is about conflict behavior. The user says: 'can you just prototype the sync quickly in the repo so we can see if it works?'",
+      "expected_output": "No code is written in the repository. The response explains briefly why (the gate), then offers the sanctioned alternatives: the fast path to a mini-spec, or, if a specific unknown fact decides the approach, a time-boxed throwaway spike in a scratch directory outside the working tree that keeps only the finding, or a conditional decision. It asks the user which they prefer, or resumes with the one pending question.",
+      "files": [],
+      "expectations": [
+        "No files are created or edited in the repository other than a spec file",
+        "The response offers the fast path or a time-boxed spike outside the working tree, and does not start the spike without the user's explicit OK",
+        "If a spike is proposed, it names the single fact it would establish and says only the finding is kept",
+        "The response asks one question and ends its turn"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Context: Step 5 of a brainstorm on export notifications. You presented 'Design 2 of 4: behavior and flows' ending with the check 'Should a different sort order still count as an identical export? A. Yes (recommended) B. No'. The user replies: 'ok'.",
+      "expected_output": "The answer is taken as choosing the recommended option for that check only. The decision is logged, and the response moves on to the next design section with its own targeted check. The spec is not marked Approved and no hand-off happens.",
+      "files": [],
+      "expectations": [
+        "The response records the sort-order decision (option A) rather than treating 'ok' as approval of the whole spec",
+        "The response presents the next design section and ends with a targeted check on its riskiest choice",
+        "No spec file is set to Status: Approved and no hand-off to plan-feature or build-feature happens"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "You are running as a subagent for an orchestrator; no human will answer questions during this run. Task: 'Turn this idea into a spec: let support leads see which ticket queues are overloaded this week.' Return the spec path when done.",
+      "expected_output": "A context sweep, then a spec written without dialogue: every unconfirmed answer tagged default, every design-changing unknown (for example what 'overloaded' means and who may see it) recorded as a blocking open question owned by the requester, linted, Status Draft (or In review), Approved by pending. The return message gives the path, the blocking questions and the defaults, and says the spec is not approved.",
+      "files": [],
+      "expectations": [
+        "The response does not wait for an answer or ask the user a question it then waits on",
+        "A spec file exists with assumptions tagged default and at least one blocking open question owned by the requester",
+        "The spec's Status is not Approved and 'Approved by / on' is not filled with a name",
+        "The return message lists the blocking questions and states the spec still needs human approval"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "I want to rebuild how our company handles customer data end to end: a consent center, a deletion pipeline across all 12 services, data-residency routing for EU customers, and a new audit log. Help me figure out what we should build.",
+      "expected_output": "After the sweep, the size is called Initiative and the work is decomposed before going deep: the parts are listed, the user is asked to agree on them and pick (or accept a recommended) first slice that delivers value alone. Only that slice will be specced; the others are named as later slices for Non-goals. One question, then the turn ends.",
+      "files": [],
+      "expectations": [
+        "The response sizes the work as Initiative",
+        "The response lists the independently shippable parts and proposes one first slice with a reason",
+        "The response says only the first slice gets a spec now and the others become later slices in Non-goals",
+        "The response asks one question and contains no design for any slice"
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "Context: the spec docs/specs/2026-03-14-export-notify.md is In review. Its header says 'Sign-off needed from: dana (requester); ravi (database on-call lead)'. You are talking to dana, who says: 'Approved, looks great.'",
+      "expected_output": "dana's approval is recorded with a date, but the spec stays In review because ravi has not approved. A blocking open question 'Sign-off from ravi' owned by ravi is added, the linter is re-run, and the response offers to open a pull request or issue for ravi's review. No hand-off to planning yet.",
+      "files": [],
+      "expectations": [
+        "dana's approval and the date are recorded in 'Approved by / on'",
+        "Status stays 'In review', not Approved",
+        "A blocking open question for ravi's sign-off, owned by ravi, is added",
+        "The response offers a pull request or issue for ravi's review and does not hand off to plan-feature or build-feature"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+# Form for the Discussions category "Show and tell" (slug `show-and-tell`).
+#
+# GitHub matches a discussion form to a category by file name, so this file must keep the
+# category's slug as its name. If the category is renamed or re-created with a different slug,
+# rename the file to match, or GitHub silently falls back to a blank post. Discussion forms
+# support only `title`, `labels` and `body`.
+title: "[Show and tell]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share something you built or shipped with these skills: a workflow, a before and after, or a skill you wrote with `skill-dev:create-skill`.
+
+        > [!WARNING]
+        > Discussions are public. Remove secrets, private hostnames and proprietary code before you post.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What you made
+      description: What it does and who it is for. Screenshots and short transcripts are welcome.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: skills
+    attributes:
+      label: Skills you used
+      multiple: true
+      options:
+        - "implementation:brainstorm-spec"
+        - "implementation:build-feature"
+        - "implementation:debug-root-cause"
+        - "implementation:docs-lookup"
+        - "implementation:execute-plan"
+        - "implementation:plan-feature"
+        - "implementation:refactor-safely"
+        - "implementation:simplify-code"
+        - "implementation:tdd"
+        - "implementation:verify-before-done"
+        - "review-suite:parallel-review"
+        - "review-suite:performance-review"
+        - "review-suite:pr-review"
+        - "review-suite:secure-code-review"
+        - "data-api:api-design"
+        - "data-api:db-migration-safety"
+        - "data-api:query-review"
+        - "workflow:adr-writer"
+        - "workflow:ci-failure-triage"
+        - "workflow:commit-message"
+        - "workflow:git-worktrees"
+        - "workflow:incident-postmortem"
+        - "workflow:pr-description"
+        - "workflow:respond-to-review"
+        - "frontend:accessibility-review"
+        - "frontend:browser-testing"
+        - "frontend:ui-design-direction"
+        - "skill-dev:create-skill"
+        - "other"
+
+  - type: input
+    id: link
+    attributes:
+      label: Link
+      description: Optional. A repository, pull request, post or demo.
+
+  - type: textarea
+    id: lessons
+    attributes:
+      label: What worked and what could be better
+      description: Optional, and the most useful part for improving the skills.

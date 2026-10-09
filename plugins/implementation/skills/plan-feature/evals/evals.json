@@ -1,0 +1,69 @@
+{
+  "skill_name": "plan-feature",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "We need to let customers export their full order history as CSV from the account page. Some enterprise accounts have several million orders. Plan this out before anyone writes code; we want it split into PRs we can review separately.",
+      "expected_output": "A full written plan following the plan template, grounded in a search of the repository (or an explicit statement that none was available), with a spike on the multi-million-row path first and slices that each have verification and rollback.",
+      "files": [],
+      "expectations": [
+        "Every file path the plan names either exists in the workspace or is marked as new; when no repository is available, the plan says prior art could not be searched instead of inventing paths",
+        "Acceptance criteria are numbered and include at least one negative criterion about cross-account access",
+        "A time-boxed spike (with its question and time box) on the multi-million-row path appears before the first implementation slice, and the scale section gives a mitigation such as streaming, background processing, or keyset pagination",
+        "CSV formula injection or output encoding is mentioned in the security section",
+        "Every implementation slice lists a verification step and a rollback, and the plan includes a feature flag with a removal slice or explains why no flag is needed",
+        "The response ends with the short report block naming decisions that need the user's input, and no implementation code is written"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Plan the rename of the `status` column on the subscriptions table to `state` as a series of PRs. The billing worker, the public API, and the admin dashboard all read it, and we deploy with rolling restarts.",
+      "expected_output": "A plan that uses expand, migrate, contract with readers deployed before writers, names every consumer, keeps the public API response backward compatible, and defers migration mechanics to the db-migration-safety skill.",
+      "files": [],
+      "expectations": [
+        "The plan does not propose a single in-place rename deployed in one step",
+        "Slices follow expand, migrate, contract, with the old column dropped only after no running version reads it",
+        "The billing worker, public API, and admin dashboard are each listed as consumers with a compatibility strategy",
+        "Mixed-version operation during rolling restarts is addressed",
+        "Each slice states how it is rolled back, and the destructive drop is identified as a one-way door"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Plan how we'd add a `--json` flag to our CLI's `list` command so it prints the same rows as JSON, and split it into slices. Don't write the code yet; I think it's a small change in cli/list.py.",
+      "expected_output": "A lite plan (or a brief note that a plan is barely needed) rather than a full template: a few acceptance criteria, reuse of the existing JSON renderer in cli/output.py, attention to the existing --format convention on export, and one or two slices verified with the Makefile's test command.",
+      "files": [
+        "evals/files/cli-app/Makefile",
+        "evals/files/cli-app/pyproject.toml",
+        "evals/files/cli-app/cli/__init__.py",
+        "evals/files/cli-app/cli/main.py",
+        "evals/files/cli-app/cli/store.py",
+        "evals/files/cli-app/cli/output.py",
+        "evals/files/cli-app/cli/export.py",
+        "evals/files/cli-app/cli/list.py",
+        "evals/files/cli-app/tests/cli/test_list.py"
+      ],
+      "expectations": [
+        "The response sizes the change as small and produces a lite plan (or says a plan is barely needed and gives a short one), not a full sixteen-section plan, and writes no code",
+        "Verification uses the project's own command from the Makefile (for example `make test TEST=tests/cli/test_list.py`) rather than an assumed bare test command",
+        "The plan reuses `render_json` or `RENDERERS` from `cli/output.py` instead of proposing a new JSON serializer",
+        "The plan notices that `export` already takes `--format json` and addresses consistency, for example by giving `list` the same `--format` option with `--json` as an alias, or by asking with a recommended default",
+        "At least one edge case visible in the code is covered: `--status` combined with JSON output, the `due` date value, or an empty task list printing `[]`"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Plan team-level billing before anyone writes code. Right now each user pays for their own subscription through Stripe, and we want a team owner to be able to pay for everyone on the team instead. Teams already exist in the app.",
+      "expected_output": "A full plan for a money-sensitive, multi-component change that asks only the few genuinely ambiguous product questions, each with a recommended default, and treats charges and refunds as one-way doors.",
+      "files": [],
+      "expectations": [
+        "The change is sized as a full plan (money-sensitive, several components)",
+        "Any questions are batched in one message, number five or fewer, and each carries a recommended default and what changes if the answer differs",
+        "No question asks something the prompt already states (which payment provider is used, whether teams exist, how billing works today), and the questions that are asked change the design, for example what happens to a member's existing individual subscription when the team starts paying, how seats are counted, or who may manage team billing",
+        "If the plan proceeds past the questions, each unanswered question appears as an assumption marked unconfirmed",
+        "Charging or refunding customers is named as a one-way door with a safeguard, such as a dry run, a staged rollout, or a reconciliation check against the payment provider",
+        "Payment-provider webhooks or retried calls are handled idempotently"
+      ]
+    }
+  ]
+}

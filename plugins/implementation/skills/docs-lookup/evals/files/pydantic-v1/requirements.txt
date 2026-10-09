@@ -1,0 +1,8 @@
+# Pinned from pyproject.toml. Install with: python -m pip install -r requirements.txt
+anyio==3.7.1
+fastapi==0.99.1
+idna==3.10
+pydantic==1.10.18
+sniffio==1.3.1
+starlette==0.27.0
+typing-extensions==4.12.2

@@ -1,0 +1,14 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 3c1a9e2..8d47b10 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -41,7 +41,7 @@ jobs:
+   e2e:
+     runs-on: ubuntu-24.04
+     strategy:
+       matrix:
+-        python-version: ["3.11"]
++        python-version: ["3.12"]
+     steps:
+       - uses: actions/checkout@v4
+       - uses: actions/setup-python@v5

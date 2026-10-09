@@ -1,0 +1,17 @@
+[
+  {
+    "type": "required_status_checks",
+    "ruleset_source_type": "Repository",
+    "ruleset_source": "acme/web",
+    "ruleset_id": 118,
+    "parameters": {
+      "strict_required_status_checks_policy": false,
+      "required_status_checks": [
+        {"context": "build"},
+        {"context": "lint"},
+        {"context": "unit"},
+        {"context": "e2e (3.11)"}
+      ]
+    }
+  }
+]

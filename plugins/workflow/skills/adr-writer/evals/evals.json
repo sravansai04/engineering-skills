@@ -1,0 +1,102 @@
+{
+  "skill_name": "adr-writer",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "We just spent the meeting going back and forth and finally agreed to move background jobs off our homegrown cron runner onto a managed queue with worker autoscaling. Main reasons were the missed jobs during deploys (we had 6 last quarter) and that nobody wants to own the cron box. We looked at keeping cron with a leader-election patch and at a workflow engine but both felt wrong. Can you write this up as an ADR? The repo checkout is at evals/files/jobs-repo and our ADRs are in docs/architecture/decisions.",
+      "expected_output": "Reads the existing ADRs and follows their convention: the new file is docs/architecture/decisions/adr-008-<slug>.md with a '# ADR-008: <decision>' title, a 'Date:' line, and a '## Status' heading followed by Context / Decision / Consequences (or the repo-compatible equivalent). Notices that the accepted ADR-004 (dedicated cron host) is contradicted by this decision and links the new ADR as superseding it, using the repo's 'Supercedes' spelling. The context states the problem (6 missed jobs during deploys last quarter, no owner for the cron host) before any solution; the options include the leader-election cron patch, the workflow engine, and the managed queue, with the rejected ones given real strengths; the decision ties to the stated reasons; consequences include at least one cost (for example at-least-once delivery requiring idempotent jobs, vendor dependency, or cost). Deciders are unknown, so they carry a TODO(confirm) marker and the ADR stays Proposed; because the new ADR is not yet accepted, ADR-004's status is left unchanged and the report says it becomes 'Superceded by ADR-008' when ADR-008 is accepted. Updates the README index with a row for ADR-008 and ends with the report block.",
+      "files": [
+        "evals/files/jobs-repo/docs/architecture/decisions/README.md",
+        "evals/files/jobs-repo/docs/architecture/decisions/adr-004-run-scheduled-jobs-on-a-dedicated-cron-host.md",
+        "evals/files/jobs-repo/docs/architecture/decisions/adr-005-use-postgresql-as-the-primary-datastore.md",
+        "evals/files/jobs-repo/docs/architecture/decisions/adr-006-use-server-side-sessions.md",
+        "evals/files/jobs-repo/docs/architecture/decisions/adr-007-use-signed-jwt-access-tokens.md"
+      ],
+      "expectations": [
+        "Creates exactly one new ADR, named adr-008-<kebab-slug>.md in docs/architecture/decisions (three-digit number, 'adr-' prefix), not 0001 or 0008, and adds an ADR-008 row to the README index in the existing table format",
+        "Matches the repo's style: the title line is '# ADR-008: ...' and states the decision, not the topic, and the status is a '## Status' section, not YAML front matter",
+        "The context describes the missed-jobs and ownership problem before naming the managed queue, and the options considered (leader-election cron patch, workflow engine, managed queue) each get a real strength when rejected",
+        "Includes at least one negative consequence of the managed queue",
+        "Does not invent deciders: marks them TODO(confirm), lists every TODO(confirm) in the report, and keeps the status Proposed, not Accepted, while one remains",
+        "Identifies ADR-004 as superseded by this decision, uses the repo's 'Supercedes' spelling for the link, does not edit ADR-004 while the new ADR is still Proposed, and ends with the report block (path, decision, also changed, needs confirmation, next steps)"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "ADR 0004 says we use REST for all internal service calls. At the platform architecture review on 2025-09-18 the backend leads and the SRE lead signed off on switching to gRPC for internal calls between the backend services; the public API stays REST. Reasons: JSON serialization is about 30% of p99 latency on the pricing-to-inventory path (August trace sample), and we want generated typed clients instead of hand-written ones. We considered staying on REST with OpenAPI-generated clients, which fixes the typing but not the payload cost. The gateway team has since added gRPC support. Please supersede 0004 properly. The repo is at evals/files/rest-repo.",
+      "expected_output": "Reads 0004, its neighbours, and the README index, and matches their MADR 3 convention: YAML front matter with lowercase 'status:' and a 'deciders:' key, unnumbered titles. Creates docs/adr/0006-<slug>.md (the highest existing number is 0005) with status accepted, date 2025-09-18, deciders 'Backend leads, SRE lead', a context explaining what changed since 0004 (the gateway now supports gRPC, measured serialization cost, wish for typed clients), scope limited to internal backend calls with the public API explicitly unaffected, the REST-plus-OpenAPI option steelmanned, at least one cost (team learning curve, harder ad-hoc debugging than curl), and a 'Supersedes [ADR-0004](0004-use-rest-for-internal-calls.md)' link. Edits 0004 only in its metadata: 'status: superseded by [ADR-0006](0006-<slug>.md)' in lowercase, with the original 2023-04-11 decision date still visible; its body is untouched. Updates both rows of the README index and verifies the relative links resolve. Reports both changed files plus the index.",
+      "files": [
+        "evals/files/rest-repo/docs/adr/README.md",
+        "evals/files/rest-repo/docs/adr/0003-use-openapi-for-public-api-contracts.md",
+        "evals/files/rest-repo/docs/adr/0004-use-rest-for-internal-calls.md",
+        "evals/files/rest-repo/docs/adr/0005-use-one-postgres-cluster-per-environment.md"
+      ],
+      "expectations": [
+        "The new file is docs/adr/0006-<kebab-slug>.md and uses YAML front matter with a 'deciders:' key (not 'decision-makers:') and a lowercase status value, matching the existing files",
+        "The new ADR's status is accepted and its date is 2025-09-18, with no TODO(confirm) markers left",
+        "The scope says the public API stays REST and the decision covers only internal backend-to-backend calls, and the context explains what changed since ADR 0004 (gateway gRPC support, measured serialization cost, typed clients)",
+        "Considers staying on REST with OpenAPI-generated clients and gives it a real strength, and includes at least one negative consequence of gRPC",
+        "Links 'Supersedes' ADR 0004 with a relative link that resolves; in 0004 only the status metadata changes (to 'superseded by' ADR 0006 with a relative link), plus at most a one-line pointer under the title, and its original 2023-04-11 date stays visible",
+        "The README index shows 0004 as superseded and has a new row for 0006, in the existing lowercase style"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Should I write an ADR for renaming the getUserData helper to fetchUserProfile across the codebase?",
+      "expected_output": "Concludes that an ADR is not warranted, because the change is reversible in one PR, local, and uncontested; recommends a lighter artifact such as a clear PR description or commit message; does not create any ADR file.",
+      "files": [],
+      "expectations": [
+        "States that an ADR is not warranted",
+        "Gives the reason in terms of reversibility or scope (one PR, local, uncontested)",
+        "Recommends a lighter artifact such as a PR description or commit message",
+        "Creates no files"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Can you review docs/adr/0012-adopt-kubernetes.md before Thursday's architecture review? The repo is at evals/files/review-repo.",
+      "expected_output": "Produces a review in the review format (ADR reviewed, Verdict, Findings most severe first with suggested rewrites, Checklist gaps) with a 'needs changes' verdict, and does not edit the file. Findings include: the context opens with the solution ('We need Kubernetes because...') instead of the problem; the drivers are vague ('Modern', 'Scalable', 'Industry best practice') and untestable; the rejected options are strawmen (VMs and Nomad dismissed in one line each with no real strengths); there are no negative consequences; claims such as 'deploys take forever' and 'everyone uses it' have no numbers, source, or date; the outcome restates 'best option' without tying to drivers; and the ADR exposes confidential material (an internal hostname and IP address, and NDA vendor pricing) that should be summarized and linked elsewhere.",
+      "files": [
+        "evals/files/review-repo/docs/adr/0012-adopt-kubernetes.md"
+      ],
+      "expectations": [
+        "Uses the review output format with a verdict of 'needs changes', and does not modify docs/adr/0012-adopt-kubernetes.md",
+        "Flags that the context leads with the solution rather than the problem, and that the drivers are vague and untestable, with testable rewrites",
+        "Flags the rejected options (VMs, Nomad) as strawmen with no stated strengths, and the absence of any negative consequence",
+        "Flags undated or unsupported claims (deploy time, 'everyone uses it')",
+        "Flags the internal hostname/IP and the NDA vendor pricing as confidential material to remove or summarize",
+        "Orders findings from most to least severe and gives a suggested rewrite for each"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "We retired the partner dashboard last month, and the GraphQL gateway went with it; nothing replaced it. Please mark ADR 9 as deprecated. The repo is at evals/files/gateway-repo.",
+      "expected_output": "Edits only docs/adr/0009-use-graphql-gateway.md's status to the repo's quoted lowercase form (status: \"deprecated\"), adds a one-line reason (the partner dashboard and its gateway were retired, with when), handles the date per the repo's MADR convention while keeping the original 2023-11-02 decision date visible, leaves the body untouched, updates the README index row for 0009 to deprecated, and creates no new ADR because nothing replaces the decision.",
+      "files": [
+        "evals/files/gateway-repo/docs/adr/README.md",
+        "evals/files/gateway-repo/docs/adr/0008-use-feature-flags-for-staged-rollouts.md",
+        "evals/files/gateway-repo/docs/adr/0009-use-graphql-gateway.md",
+        "evals/files/gateway-repo/docs/adr/0010-run-background-jobs-on-a-managed-queue.md"
+      ],
+      "expectations": [
+        "Sets ADR 0009's status to deprecated in the existing quoted lowercase YAML style",
+        "Adds a one-line reason that says what was removed and roughly when",
+        "Leaves the Context, Drivers, Options, Outcome, and Consequences sections of 0009 unchanged",
+        "Keeps the original 2023-11-02 decision date visible",
+        "Updates the README index row for 0009 to deprecated",
+        "Creates no new ADR file and edits no other ADR"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Thanks, that comparison settles it. We'll use NATS rather than Kafka for the internal event bus: we don't need long retention, and nobody here wants to run a Kafka cluster. Next question: what's a sensible naming scheme for the subjects?",
+      "expected_output": "Answers the subject-naming question. Because the user did not ask for an ADR, creates and edits no files; at most it offers, in one sentence, to record the NATS-over-Kafka decision as an ADR and says why it qualifies (hard to reverse, cross-cutting).",
+      "files": [],
+      "expectations": [
+        "Answers the question about naming NATS subjects",
+        "Creates no ADR file and edits no files",
+        "If it mentions an ADR at all, it is a single-sentence offer that waits for the user's agreement"
+      ]
+    }
+  ]
+}

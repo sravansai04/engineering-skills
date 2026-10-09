@@ -1,0 +1,81 @@
+{
+  "skill_name": "simplify-code",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "you just finished the invoice CSV export on this branch (feature/invoice-csv). before I open the PR can you simplify it? it feels bloated, there's a try/catch around basically everything and a log line after every step",
+      "expected_output": "Records the project's test/lint/type-check commands and a green baseline before editing; scopes to the branch diff against the merge base; searches for an existing CSV or formatting helper before keeping the new one; removes narration comments, redundant checks and noise logs in small batches with checks rerun after each; treats removal of error-swallowing catches as a behavior change (tier 2) rather than calling it behavior-preserving; ends with the structured report including Behavior changes and Deliberately left alone.",
+      "files": [],
+      "expectations": [
+        "Runs the project's tests (and lint/type check if present) before the first edit and reports the result",
+        "Determines scope from the branch diff against its merge base and does not edit files outside it",
+        "Searches the codebase for an existing helper before keeping any new utility function",
+        "Reruns checks after each batch of edits, not only at the end, and never edits a test assertion to make a batch pass",
+        "Any removed catch that previously swallowed errors is listed under Behavior changes or left alone with a reason",
+        "Final report contains 'Behavior changes' and 'Deliberately left alone' sections"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "clean up src/lib/money.ts in this package. formatMoney has a `locale` param nobody passes and there's a toCents() wrapper that nothing calls. just delete them",
+      "files": [
+        "evals/files/money-lib/package.json",
+        "evals/files/money-lib/src/index.ts",
+        "evals/files/money-lib/src/lib/money.ts"
+      ],
+      "expected_output": "Reads package.json and src/index.ts before deleting anything and finds that formatMoney and toCents are re-exported from the entry point of a package published for other services. Treats both deletions as contract changes: before touching them, explains what makes them public and that a search inside this repository cannot rule out outside callers, then either waits for the user to confirm after that explanation or recommends a deprecate-before-delete path through refactor-safely. Non-contract cleanups inside money.ts, such as the two narrating comments, may still be applied.",
+      "expectations": [
+        "Inspects package.json `exports` and src/index.ts before deleting anything",
+        "States that formatMoney and toCents are re-exported from the published package entry point",
+        "Explains that callers in other repositories or published consumers are invisible to a search of this repository",
+        "Does not delete toCents or the `locale` parameter in this turn; asks for confirmation after giving that explanation, or recommends deprecating before deleting (refactor-safely)",
+        "Lists the declined or pending deletions under Deliberately left alone with the reason",
+        "Any edits it does make in money.ts leave the exported names and signatures unchanged"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "simplify the parser module please, src/parser/. it's gotten really nested. heads up, tests/parser/test_escapes.py has been failing since this morning's merge, just ignore that one",
+      "files": [],
+      "expected_output": "Does not start simplifying code that a failing test exercises. Explains that with a red test covering the scope, 'the tests still pass' can no longer show that behavior was preserved, so the failure has to be understood first. Recommends debug-root-cause or ci-failure-triage and offers to run the simplification once the baseline is green. Makes no edits to src/parser/.",
+      "expectations": [
+        "Makes no edits to src/parser/",
+        "Explains why a failing test that covers the scope blocks a behavior-preserving cleanup, instead of silently skipping or deselecting that test",
+        "Recommends diagnosing the failure first (debug-root-cause or ci-failure-triage) and offers to resume once the baseline is green"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "src/reports/exporter.py is way over-engineered for what it does. there's an abstract Exporter base, one CsvExporter subclass, and an ExporterFactory with a registry that only ever has csv in it. simplify it",
+      "files": [],
+      "expected_output": "Before collapsing the hierarchy, searches tests for doubles or subclasses of Exporter, configuration or DI wiring that references it, and whether any of it is exported outside the module. If none, replaces the base, factory and registry with a single function or class, updates the call sites inside scope, keeps tests green, and reports the abstraction removal with the evidence. If something does depend on it, keeps the seam and says why.",
+      "expectations": [
+        "Searches tests and configuration for references to Exporter / ExporterFactory before removing them",
+        "Checks whether the classes are imported from outside the module",
+        "Updates every call site in the same batch as the removal",
+        "Report cites the evidence that made the removal safe"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "I just wrote orders/export.py for the finance export. simplify it before I send it for review. tests run with `make test`",
+      "files": [
+        "evals/files/orders-py/Makefile",
+        "evals/files/orders-py/orders/__init__.py",
+        "evals/files/orders-py/orders/audit.py",
+        "evals/files/orders-py/orders/text.py",
+        "evals/files/orders-py/orders/export.py",
+        "evals/files/orders-py/tests/test_export.py"
+      ],
+      "expected_output": "Runs `make test` green before editing and sets a checkpoint first (git, or a baseline copy if the workspace is not under version control). Removes the safe bloat: the unused `json` import (citing that importing json registers nothing), the narrating comments and echo docstring, the trailing `else: continue`, and the assign-then-return in to_csv. Drops the unused `receipt` binding but keeps the `audit.record(...)` call, which writes the audit trail. Does not silently swap `_make_slug` for `orders.text.slugify`: names an input where they differ ('Hello, World!' gives a trailing dash, 'Café' gives 'caf-' versus 'cafe') and treats the swap as a behavior change or leaves it alone. Keeps `except InvalidOperation: raise`, because without it the broader `except Exception` below would turn a malformed amount into zero. Leaves `range(1, len(orders))` alone and reports under Possible bugs that the first order is never exported. Introduces no early return in mark_exported that skips `_lock.release()`; if it moves to `with _lock:`, that is its own batch and the release-on-exception difference is reported. Reruns the tests after each batch and ends with the structured report.",
+      "expectations": [
+        "Runs `make test` before the first edit, reruns it after each batch, and it passes at the end with no assertion in tests/test_export.py edited",
+        "After the cleanup, export_rows still calls audit.record('export', batch_id); at most the unused `receipt` binding is removed",
+        "_make_slug is not silently replaced by orders.text.slugify: it is left alone or flagged as a behavior change, and at least one input where the two differ is named",
+        "The `except InvalidOperation: raise` clause is kept, or InvalidOperation still escapes parse_amount after any restructuring, and the report gives the broader handler below it as the reason",
+        "The `range(1, len(orders))` loop is not changed, and the skipped first order is listed under 'Possible bugs spotted, not fixed'",
+        "mark_exported gains no early return that bypasses `_lock.release()`; if it is converted to `with _lock:`, the report names the changed exception path"
+      ]
+    }
+  ]
+}

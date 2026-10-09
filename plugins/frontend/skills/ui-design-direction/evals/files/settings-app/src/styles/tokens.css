@@ -1,0 +1,52 @@
+/* Design tokens. Primitives first; components use only the semantic roles below. */
+:root {
+  color-scheme: light;
+
+  /* primitives */
+  --palette-neutral-0: #ffffff;
+  --palette-neutral-50: #f6f7f9;
+  --palette-neutral-200: #dde1e7;
+  --palette-neutral-600: #4b5563;
+  --palette-neutral-900: #111827;
+  --palette-indigo-600: #4f46e5;
+  --palette-indigo-700: #4338ca;
+  --palette-red-50: #fef2f2;
+  --palette-red-200: #fecaca;
+  --palette-red-600: #dc2626;
+  --palette-red-700: #b91c1c;
+
+  /* semantic roles */
+  --color-surface-canvas: var(--palette-neutral-50);
+  --color-surface-raised: var(--palette-neutral-0);
+  --color-text-primary: var(--palette-neutral-900);
+  --color-text-secondary: var(--palette-neutral-600);
+  --color-text-on-accent: var(--palette-neutral-0);
+  --color-border-subtle: var(--palette-neutral-200);
+  --color-border-focus: var(--palette-indigo-600);
+  --color-accent-rest: var(--palette-indigo-600);
+  --color-accent-hover: var(--palette-indigo-700);
+  --color-danger-fg: var(--palette-red-700);
+  --color-danger-bg: var(--palette-red-50);
+  --color-danger-border: var(--palette-red-200);
+  --color-danger-solid: var(--palette-red-600);
+  --color-danger-solid-hover: var(--palette-red-700);
+  --color-text-on-danger: var(--palette-neutral-0);
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --shadow-raised: 0 1px 2px rgb(17 24 39 / 0.06), 0 4px 12px rgb(17 24 39 / 0.06);
+  --font-body: "Inter", system-ui, sans-serif;
+  --text-body-size: 0.9375rem;
+  --text-title-size: 1.125rem;
+  --duration-fast: 120ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+}

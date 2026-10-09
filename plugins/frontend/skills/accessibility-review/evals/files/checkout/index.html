@@ -1,0 +1,119 @@
+<!doctype html>
+<!-- Eval fixture with PLANTED accessibility defects. Do not copy this markup.
+     The list of defects and what each tool is expected to report is in ../EXPECTED.md. -->
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Checkout</title>
+  <style>
+    body { margin: 0; font: 16px/1.5 system-ui, sans-serif; color: #1f2937; background: #fff; }
+    header, main { padding: 8px 24px; }
+    h1, h2, p { margin: 6px 0; }
+    h1 { font-size: 28px; } h2 { font-size: 20px; }
+    nav a { margin-right: 12px; }
+    .skip { position: absolute; left: -9999px; }
+    .muted { color: #aaa; }
+    .apply:focus { outline: none; }
+    .tiny { width: 16px; height: 16px; padding: 0; margin: 0; border: 1px solid #4b5563; background: #f3f4f6; font-size: 10px; line-height: 1; }
+    .card { cursor: pointer; border: 1px solid #6b7280; border-radius: 6px; padding: 8px 12px; max-width: 320px; }
+    .promo-info { display: inline-block; padding: 4px 8px; }
+    .icon-btn { width: 32px; height: 32px; padding: 6px; border: 1px solid #4b5563; background: #fff; }
+    .spacer { height: 900px; }
+    .cookie { position: fixed; left: 0; right: 0; bottom: 0; height: 88px; padding: 12px 24px; background: #111827; color: #fff; }
+    .cookie button { margin-top: 4px; }
+    dialog { width: min(420px, 90vw); }
+    .dlg-close { float: right; width: 32px; height: 32px; padding: 6px; border: 1px solid #4b5563; background: #fff; }
+    .invalid { border: 2px solid #dc2626; }
+    fieldset { margin: 8px 0; padding: 4px 12px; }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to main content</a>
+  <header>
+    <nav aria-label="Main">
+      <a href="#shop">Shop</a>
+      <a href="#cart">Cart</a>
+      <a href="#help" tabindex="1">Need help?</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <h1>Checkout</h1>
+    <p class="muted">Prices include VAT.</p>
+    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%2310b981'/%3E%3C/svg%3E" width="40" height="40">
+
+    <section aria-labelledby="ship-h">
+      <h2 id="ship-h">Shipping address</h2>
+      <p>Jane Doe, 1 Main Street, Springfield</p>
+      <button type="button" id="edit-address">Edit address</button>
+    </section>
+
+    <form id="checkout" novalidate>
+      <h2>Contact and payment</h2>
+      <p>
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email">
+      </p>
+      <p>
+        <input id="promo" name="promo" placeholder="Promo code">
+        <button type="button" class="apply">Apply promo</button>
+        <span class="promo-info" tabindex="0">Promo terms</span>
+      </p>
+
+      <fieldset>
+        <legend>Delivery speed</legend>
+        <label><input type="radio" name="speed" value="std" checked> Standard</label>
+        <label><input type="radio" name="speed" value="exp"> Express</label>
+        <label><input type="radio" name="speed" value="next"> Next day</label>
+      </fieldset>
+
+      <p>Quantity: <span id="qty">1</span></p>
+      <div class="qty"><button type="button" class="tiny" aria-label="Decrease quantity">-</button><button type="button" class="tiny" aria-label="Increase quantity">+</button></div>
+
+      <p>Payment method</p>
+      <div class="card" id="saved-card">Use saved card ending 4242</div>
+      <p>
+        <button type="button" class="icon-btn" id="gift">
+          <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16"><path d="M2 6h12v8H2zM8 6v8M1 4h14v2H1z" fill="none" stroke="currentColor"/></svg>
+        </button>
+      </p>
+
+      <div class="spacer"></div>
+      <button type="submit" id="place-order">Place order</button>
+    </form>
+  </main>
+
+  <dialog id="address-dialog" aria-labelledby="addr-title">
+    <button type="button" class="dlg-close" id="dlg-close">
+      <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor"/></svg>
+    </button>
+    <h2 id="addr-title">Edit address</h2>
+    <form method="dialog">
+      <p><label for="street">Street</label> <input id="street" name="street" autocomplete="street-address" value="1 Main Street"></p>
+      <p><label for="city">City</label> <input id="city" name="city" autocomplete="address-level2" value="Springfield"></p>
+      <button type="submit" value="save">Save</button>
+    </form>
+  </dialog>
+
+  <div class="cookie" role="region" aria-label="Cookie notice">
+    We use cookies to run this shop.<br>
+    <button type="button" id="accept-cookies">Accept cookies</button>
+  </div>
+
+  <script>
+    const dialog = document.getElementById('address-dialog');
+    document.getElementById('edit-address').addEventListener('click', () => dialog.showModal());
+    document.getElementById('dlg-close').addEventListener('click', () => dialog.close());
+    document.getElementById('saved-card').addEventListener('click', (e) => e.currentTarget.classList.toggle('selected'));
+    const qty = document.getElementById('qty');
+    document.querySelectorAll('.tiny').forEach((b, i) =>
+      b.addEventListener('click', () => { qty.textContent = Math.max(1, Number(qty.textContent) + (i ? 1 : -1)); }));
+    document.getElementById('checkout').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email');
+      email.classList.toggle('invalid', !email.value.includes('@'));
+    });
+  </script>
+</body>
+</html>

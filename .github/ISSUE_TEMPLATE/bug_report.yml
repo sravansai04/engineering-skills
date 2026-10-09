@@ -1,0 +1,127 @@
+name: Bug report
+description: A skill gave wrong or unsafe guidance, did something it should not, or one of its scripts failed.
+title: "[Bug]: "
+labels: ["type:bug", "status:needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting this. One problem per issue, please.
+
+        > [!WARNING]
+        > Issues are public. Before you paste a prompt, output or transcript, remove API keys, tokens, passwords, private hostnames, customer data, and any code or text you are not allowed to share. Replace them with `<redacted>`.
+
+        If the skill loaded when it should not have (or did not load when it should), the **Skill improvement** form fits better. Security problems go through private vulnerability reporting, never a public issue.
+
+  - type: dropdown
+    id: skill
+    attributes:
+      label: Skill
+      description: Skills are listed as `plugin:skill`, the way Claude Code names them. Pick `other` if yours is not listed and name it in the next field.
+      options:
+        - "implementation:brainstorm-spec"
+        - "implementation:build-feature"
+        - "implementation:debug-root-cause"
+        - "implementation:docs-lookup"
+        - "implementation:execute-plan"
+        - "implementation:plan-feature"
+        - "implementation:refactor-safely"
+        - "implementation:simplify-code"
+        - "implementation:tdd"
+        - "implementation:verify-before-done"
+        - "review-suite:parallel-review"
+        - "review-suite:performance-review"
+        - "review-suite:pr-review"
+        - "review-suite:secure-code-review"
+        - "data-api:api-design"
+        - "data-api:db-migration-safety"
+        - "data-api:query-review"
+        - "workflow:adr-writer"
+        - "workflow:ci-failure-triage"
+        - "workflow:commit-message"
+        - "workflow:git-worktrees"
+        - "workflow:incident-postmortem"
+        - "workflow:pr-description"
+        - "workflow:respond-to-review"
+        - "frontend:accessibility-review"
+        - "frontend:browser-testing"
+        - "frontend:ui-design-direction"
+        - "skill-dev:create-skill"
+        - "other"
+    validations:
+      required: true
+
+  - type: input
+    id: other-skill
+    attributes:
+      label: Other skill
+      description: Only if you picked `other` above. Name the skill and the plugin or collection it came from.
+
+  - type: input
+    id: claude-code-version
+    attributes:
+      label: Claude Code version
+      description: The output of `claude --version`.
+      placeholder: "2.1.295 (Claude Code)"
+    validations:
+      required: true
+
+  - type: input
+    id: plugin-version
+    attributes:
+      label: Plugin version
+      description: Run `claude plugin list` and copy the `Version:` line shown for the plugin.
+      placeholder: "1.0.0"
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      description: Include the version, and the shell if a bundled script failed.
+      placeholder: "macOS 15.6 with zsh, Ubuntu 24.04, Windows 11 with WSL 2"
+    validations:
+      required: true
+
+  - type: textarea
+    id: prompt
+    attributes:
+      label: The prompt
+      description: What you typed, word for word (redacted), plus any context Claude had, such as the files or PR it was working on.
+      placeholder: "/review-suite:pr-review 123, or: why is this query slow?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      description: What a correct result looks like. A link to documentation that shows the right behavior helps a lot.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened instead
+      description: The wrong advice, the command that failed, or the step that was skipped.
+    validations:
+      required: true
+
+  - type: textarea
+    id: transcript
+    attributes:
+      label: Transcript excerpt
+      description: The relevant part of the session or the script's output. Redact secrets and anything proprietary first.
+      render: text
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I searched the existing issues and this has not been reported.
+          required: true
+        - label: I removed secrets, private hostnames and proprietary code from everything above.
+          required: true

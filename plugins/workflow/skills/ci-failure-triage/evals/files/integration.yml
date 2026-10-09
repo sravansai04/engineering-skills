@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run lint
+        run: make lint
+
+  unit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run unit tests
+        run: make test-unit
+
+  integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    services:
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: make deps
+      - name: Run integration tests
+        run: make test-integration
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-junit
+          path: reports/integration.xml

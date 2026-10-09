@@ -1,0 +1,43 @@
+test (3.12)	Set up job	2026-09-30T14:02:11.1021934Z Current runner version: '2.328.0'
+test (3.12)	Set up job	2026-09-30T14:02:11.1050012Z Runner Image: ubuntu-24.04
+test (3.12)	Initialize containers	2026-09-30T14:02:14.5512031Z ##[command]/usr/bin/docker pull postgres:16
+test (3.12)	Initialize containers	2026-09-30T14:02:21.0091233Z ##[command]/usr/bin/docker create --name 4f1c_postgres16 --network-alias postgres -p 5432:5432 -e POSTGRES_PASSWORD=test postgres:16
+test (3.12)	Initialize containers	2026-09-30T14:02:21.6610349Z ##[command]/usr/bin/docker start 4f1c_postgres16
+test (3.12)	Set up Python	2026-09-30T14:02:23.0172210Z Successfully set up CPython (3.12.6)
+test (3.12)	Install dependencies	2026-09-30T14:02:24.1188021Z Resolved 41 packages in 312ms
+test (3.12)	Install dependencies	2026-09-30T14:02:26.8812900Z Installed 41 packages in 2.71s
+test (3.12)	Run tests	2026-09-30T14:02:27.0501120Z ##[group]Run uv run pytest -n 4 --junitxml=reports/junit.xml
+test (3.12)	Run tests	2026-09-30T14:02:27.0503317Z ============================= test session starts ==============================
+test (3.12)	Run tests	2026-09-30T14:02:27.0503901Z platform linux -- Python 3.12.6, pytest-8.3.3, pluggy-1.5.0
+test (3.12)	Run tests	2026-09-30T14:02:27.0504410Z created: 4/4 workers
+test (3.12)	Run tests	2026-09-30T14:02:28.2210004Z 4 workers [212 items]
+test (3.12)	Run tests	2026-09-30T14:02:28.9901122Z EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE [ 36%]
+test (3.12)	Run tests	2026-09-30T14:02:29.4410332Z EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE [ 73%]
+test (3.12)	Run tests	2026-09-30T14:02:29.8811021Z EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE                         [100%]
+test (3.12)	Run tests	2026-09-30T14:02:29.9001203Z ==================================== ERRORS ====================================
+test (3.12)	Run tests	2026-09-30T14:02:29.9002104Z _____________________ ERROR at setup of test_create_invoice _____________________
+test (3.12)	Run tests	2026-09-30T14:02:29.9003390Z [gw0] linux -- Python 3.12.6 /home/runner/work/app/app/.venv/bin/python
+test (3.12)	Run tests	2026-09-30T14:02:29.9004101Z
+test (3.12)	Run tests	2026-09-30T14:02:29.9004822Z     @pytest.fixture(scope="session")
+test (3.12)	Run tests	2026-09-30T14:02:29.9005513Z     def db_engine():
+test (3.12)	Run tests	2026-09-30T14:02:29.9006120Z         engine = create_engine(os.environ["DATABASE_URL"])
+test (3.12)	Run tests	2026-09-30T14:02:29.9006841Z >       with engine.connect() as conn:
+test (3.12)	Run tests	2026-09-30T14:02:29.9007520Z
+test (3.12)	Run tests	2026-09-30T14:02:29.9008213Z tests/conftest.py:23:
+test (3.12)	Run tests	2026-09-30T14:02:29.9008990Z _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+test (3.12)	Run tests	2026-09-30T14:02:29.9010021Z E   sqlalchemy.exc.OperationalError: (psycopg.OperationalError) connection failed: connection to server at "127.0.0.1", port 5432 failed: Connection refused
+test (3.12)	Run tests	2026-09-30T14:02:29.9010844Z E   	Is the server running on that host and accepting TCP/IP connections?
+test (3.12)	Run tests	2026-09-30T14:02:29.9011522Z _____________________ ERROR at setup of test_invoice_totals _____________________
+test (3.12)	Run tests	2026-09-30T14:02:29.9012230Z [gw1] linux -- Python 3.12.6 /home/runner/work/app/app/.venv/bin/python
+test (3.12)	Run tests	2026-09-30T14:02:29.9013001Z E   sqlalchemy.exc.OperationalError: (psycopg.OperationalError) connection failed: connection to server at "127.0.0.1", port 5432 failed: Connection refused
+test (3.12)	Run tests	2026-09-30T14:02:29.9013820Z (... 209 more errors with the same message omitted from this fixture ...)
+test (3.12)	Run tests	2026-09-30T14:02:29.9201001Z =============================== warnings summary ===============================
+test (3.12)	Run tests	2026-09-30T14:02:29.9201822Z .venv/lib/python3.12/site-packages/dateutil/tz/tz.py:37: DeprecationWarning: datetime.datetime.utcfromtimestamp() is deprecated and scheduled for removal in a future version.
+test (3.12)	Run tests	2026-09-30T14:02:29.9202511Z -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+test (3.12)	Run tests	2026-09-30T14:02:29.9203330Z - generated xml file: /home/runner/work/app/app/reports/junit.xml -
+test (3.12)	Run tests	2026-09-30T14:02:29.9204100Z =========================== short test summary info ============================
+test (3.12)	Run tests	2026-09-30T14:02:29.9204822Z ERROR tests/test_billing.py::test_create_invoice - sqlalchemy.exc.OperationalError: (psycopg.OperationalError) connection failed: ...
+test (3.12)	Run tests	2026-09-30T14:02:29.9205530Z ERROR tests/test_billing.py::test_invoice_totals - sqlalchemy.exc.OperationalError: (psycopg.OperationalError) connection failed: ...
+test (3.12)	Run tests	2026-09-30T14:02:29.9206211Z (... 210 more ERROR lines omitted from this fixture ...)
+test (3.12)	Run tests	2026-09-30T14:02:29.9301002Z ======================== 1 warning, 212 errors in 2.88s =========================
+test (3.12)	Run tests	2026-09-30T14:02:29.9810440Z ##[error]Process completed with exit code 1.

@@ -1,0 +1,4 @@
+reports:
+  default-exporter: csvExporter
+  # The partner's import job still expects the fixed-width format.
+  quarterly-exporter: legacyExporter

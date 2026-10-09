@@ -1,0 +1,85 @@
+{
+  "skill_name": "query-review",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Postgres 16. Product says our daily 'revenue per active user' chart is off, but the active-user and session counts look right, so it can't be the joins. Query:\n\nSELECT (s.started_at AT TIME ZONE 'America/Chicago')::date AS day,\n       COUNT(DISTINCT s.user_id) AS active_users,\n       COUNT(DISTINCT s.id) AS sessions,\n       SUM(p.amount_cents) AS revenue_cents,\n       SUM(p.amount_cents) / COUNT(DISTINCT s.user_id) AS revenue_per_user_cents\nFROM users u\nJOIN sessions s ON s.user_id = u.id\nLEFT JOIN purchases p ON p.user_id = u.id AND p.created_at::date = s.started_at::date\nWHERE s.started_at >= now() - interval '7 days'\nGROUP BY 1\nORDER BY 1;\n\nsessions.started_at and purchases.created_at are `timestamp without time zone` columns that store UTC. amount_cents is an integer. Users often have several sessions and several purchases on the same day.",
+      "expected_output": "Leads with the verdict and a Correctness bug diagnosis. Explains that each purchase joins to every session the user had that day, so SUM(p.amount_cents) is multiplied by the session count while COUNT(DISTINCT) hides the same fan-out in the user and session columns (the counts looking right is not evidence the join is right); rewrites by aggregating purchases per user and local day (or per day) in a separate subquery before joining. Flags that AT TIME ZONE on a timestamp column holding UTC converts in the wrong direction and gives (s.started_at AT TIME ZONE 'UTC') AT TIME ZONE 'America/Chicago'; notes that the purchase join matches UTC dates while the buckets are meant to be Chicago days, and that comparing the timestamp column with now() goes through the session TimeZone. Flags integer division of a bigint sum by a bigint count (cast to numeric) and NULL revenue on days with no purchases (COALESCE). Recommends proving the rewrite with an EXCEPT ALL or known-answer check on seed data with several sessions and purchases per user-day and rows near local midnight. Uses the report format with severities, correctness findings first.",
+      "files": [],
+      "expectations": [
+        "Leads with the verdict and a Correctness bug diagnosis",
+        "Explains that each purchase joins to every session that day, multiplying SUM(amount_cents) while COUNT(DISTINCT) hides the same fan-out",
+        "Rewrites by aggregating purchases per user and local day in a separate subquery before joining",
+        "Flags AT TIME ZONE on a UTC timestamp column as converting in the wrong direction and gives the double conversion",
+        "Flags integer division of the bigint sum by the count and NULL revenue on days without purchases",
+        "Recommends proving the rewrite with an EXCEPT ALL or known-answer check on data with several sessions and purchases per user-day"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "This endpoint got slow as the table grew to ~40M rows. Postgres 15. Query: SELECT id, total, created_at FROM orders WHERE customer_id = $1 ORDER BY created_at DESC LIMIT 20 OFFSET $2; Indexes: orders_pkey (id), orders_customer_id_idx (customer_id), orders_created_at_idx (created_at). EXPLAIN ANALYZE shows 'Index Scan Backward using orders_created_at_idx', 'Rows Removed by Filter: 2104331', 'Buffers: shared hit=2210 read=101442', Execution Time 930 ms. What should we do?",
+      "expected_output": "Explains that the planner walks the created_at index and filters by customer, discarding millions of rows; proposes a composite index on (customer_id, created_at DESC) or with id as tiebreaker; recommends keyset pagination instead of OFFSET with a unique tiebreaker in ORDER BY; notes the single-column customer_id index becomes redundant; asks for or describes a before/after plan comparison; mentions rolling out the index via a migration-safety process.",
+      "files": [],
+      "expectations": [
+        "Explains that the planner walks the created_at index and filters by customer, discarding about 2.1M rows",
+        "Proposes a composite index on (customer_id, created_at DESC), optionally with id as a tiebreaker",
+        "Recommends keyset pagination instead of OFFSET, with a unique tiebreaker in ORDER BY",
+        "Notes that the single-column customer_id index becomes redundant",
+        "Asks for or describes a before-and-after plan and hands the index rollout to migration safety"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "We run 8 worker processes that pull jobs with this Django code and sometimes two workers process the same job, and occasionally we see deadlocks:\n\njob = Job.objects.filter(status='queued').order_by('run_at').first()\nif job:\n    job.status = 'running'\n    job.save()\n    process(job)  # calls external HTTP API\n    job.status = 'done'\n    job.save()\n\nPostgres 16. How do we fix this?",
+      "expected_output": "Identifies the check-then-act race with no lock; recommends claiming with SELECT ... FOR UPDATE SKIP LOCKED inside transaction.atomic() (select_for_update(skip_locked=True)) or a single UPDATE ... RETURNING claim statement; says to commit the claim before calling the external API rather than holding the transaction open; adds a visibility timeout/lease and idempotent handlers for crashed workers; suggests a partial index on run_at WHERE status = 'queued'; addresses deadlocks via short transactions and consistent ordering with retry.",
+      "files": [],
+      "expectations": [
+        "Identifies the check-then-act race: two workers can claim the same queued job",
+        "Recommends claiming with select_for_update(skip_locked=True) inside transaction.atomic(), or one UPDATE ... RETURNING statement",
+        "Commits the claim before calling the external API instead of holding a transaction open",
+        "Adds a lease or visibility timeout and idempotent handlers for crashed workers",
+        "Suggests a partial index on run_at WHERE status = 'queued' and addresses deadlocks with short transactions, consistent order, and retry"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Can you tell me what's wrong here? This is all I have, it's from the reporting replica (Postgres 16):\n\nGather  (cost=1896.00..412870.40 rows=2510 width=28) (actual time=18.412..4212.877 rows=1830 loops=1)\n  Workers Planned: 2\n  Workers Launched: 2\n  Buffers: shared hit=4911 read=301442\n  ->  Parallel Seq Scan on invoices  (cost=896.00..411619.40 rows=1046 width=28) (actual time=16.950..4196.304 rows=610 loops=3)\n        Filter: ((status = 'open'::text) AND (NOT (hashed SubPlan 1)))\n        Rows Removed by Filter: 4166056\n        Buffers: shared hit=4911 read=301442\n        SubPlan 1\n          ->  Seq Scan on disputes  (cost=0.00..2484.00 rows=150000 width=8) (actual time=0.012..11.205 rows=150000 loops=3)\n                Buffers: shared hit=2436\nPlanning Time: 0.402 ms\nExecution Time: 4213.511 ms",
+      "expected_output": "Works from the plan alone and states what is missing (query text, schema, indexes, how often it runs), labelling index advice as a hypothesis until a before/after plan exists. Reads the parallel arithmetic correctly: 610 rows x 3 loops = 1,830 rows, but time is not multiplied by loops, so the scan took about 4.2 s of elapsed time (not 12.6 s) and accounts for nearly all of it. Notes the scan discards roughly 12.5M rows (4,166,056 x 3) and reads about 2.3 GB (301,442 pages read) to return 1,830 open invoices, so an index serving status = 'open' (a partial index, or a composite with the other filter columns) is the likely fix. Recognizes NOT (hashed SubPlan 1) as NOT IN (subquery) over disputes: warns that one NULL in that column empties the result, recommends NOT EXISTS (an anti-join), and notes the hashed subplan itself is cheap here, so it is a correctness finding more than the bottleneck. Uses the report format.",
+      "files": [],
+      "expectations": [
+        "Works from the plan alone and says what is missing (query text, schema, indexes, run frequency), labelling index advice as a hypothesis",
+        "Reads the parallel plan correctly: 610 rows x 3 loops = 1,830 rows, and about 4.2 s elapsed rather than 12.6 s",
+        "Notes about 12.5M rows discarded and about 2.3 GB read to return 1,830 rows, and suggests an index serving status = 'open'",
+        "Recognizes NOT (hashed SubPlan 1) as NOT IN over a subquery, warns about NULLs, and recommends NOT EXISTS",
+        "Treats the NOT IN issue as a correctness finding rather than the bottleneck, and uses the report format"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "MySQL 8.4. Looking up a customer by phone takes about 3 seconds even though phone has an index. The Java service runs `SELECT id, name FROM customers WHERE phone = ?` and binds it with `stmt.setLong(1, phoneNumber)`. phone is VARCHAR(20). EXPLAIN gives:\n\nid: 1, select_type: SIMPLE, table: customers, type: ALL, possible_keys: idx_customers_phone, key: NULL, key_len: NULL, ref: NULL, rows: 4821330, filtered: 10.00, Extra: Using where",
+      "expected_output": "Explains that comparing a VARCHAR column with a numeric value makes MySQL convert every row's string to a number, which rules out the index (type=ALL, key=NULL even though possible_keys lists it) and also matches values the caller did not mean (formatting variants, leading zeros, trailing text). Fix: bind the parameter as a string (setString) in the same normalized format the column stores, and normalize stored phone values if formats vary; confirm with EXPLAIN that access becomes ref on idx_customers_phone, optionally via SHOW WARNINGS showing the type-conversion warning. Notes that the fix can change which rows match, so results should be compared before and after. Uses the report format.",
+      "files": [],
+      "expectations": [
+        "Explains that comparing the VARCHAR phone column with a numeric parameter converts every row, which disables the index",
+        "Notes that the numeric comparison can also match values the caller did not mean (formatting, leading zeros, trailing text)",
+        "Fixes it by binding the parameter as a string (setString) in the stored format, normalizing stored values if formats vary",
+        "Confirms with EXPLAIN that access becomes ref on idx_customers_phone, optionally citing SHOW WARNINGS",
+        "Notes the fix can change which rows match and recommends comparing results before and after"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Is this endpoint OK? Express + node-postgres, products has about 2M rows.\n\napp.get('/products', async (req, res) => {\n  const term = req.query.q || '';\n  const sort = req.query.sort || 'created_at';\n  const { rows } = await pool.query(\n    `SELECT id, name, price FROM products\n     WHERE name ILIKE '%${term}%'\n     ORDER BY ${sort} DESC\n     LIMIT 50 OFFSET ${Number(req.query.offset) || 0}`\n  );\n  res.json(rows);\n});",
+      "expected_output": "Critical: SQL injection through both template-literal interpolations. The search term must be a bound parameter ($1); the sort column cannot be bound, so it must be mapped through an allowlist with a default (and direction handled the same way). Escapes %, _ and the escape character in the search term and declares ESCAPE so user wildcards are literal. Binds LIMIT and OFFSET as parameters and caps the offset or page size. Performance: a leading-wildcard ILIKE cannot use a B-tree index, so suggests a pg_trgm GIN index (useful for terms of 3+ characters) proven with a before/after plan; flags deep OFFSET and recommends keyset pagination with a unique tiebreaker (ORDER BY <col> DESC, id DESC). Provides a corrected handler and uses the report format with severities.",
+      "files": [],
+      "expectations": [
+        "Rates the SQL injection through both template-literal interpolations as critical",
+        "Binds the search term as a parameter and maps the sort column and direction through an allowlist with a default",
+        "Escapes %, _, and the escape character in the search term and declares ESCAPE",
+        "Binds LIMIT and OFFSET and caps the page size or offset",
+        "Notes that a leading-wildcard ILIKE can't use a B-tree index and suggests a pg_trgm GIN index proven with a plan",
+        "Recommends keyset pagination with a unique tiebreaker and provides a corrected handler in the report format"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "skill_name": "db-migration-safety",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Our Postgres 16 `orders` table has about 120M rows and takes constant writes. I wrote this Rails migration: `add_index :orders, :customer_id` and, in the same migration, `change_column_null :orders, :shipping_country, false`. Is it safe to ship with tomorrow's deploy?",
+      "expected_output": "Verdict Block or Fix before merge. Flags that a non-concurrent index build blocks writes for its duration and recommends `algorithm: :concurrently` with `disable_ddl_transaction!` in its own migration. Flags SET NOT NULL as a full scan under ACCESS EXCLUSIVE and gives the PG 12-17 recipe: CHECK (shipping_country IS NOT NULL) NOT VALID, VALIDATE CONSTRAINT, SET NOT NULL, drop the CHECK, each as a separate step, after confirming or backfilling NULLs and after code always writes the column. Recommends lock_timeout plus retry, splitting the two operations, and measuring on a production-sized copy. Uses the report format with a findings table and a proposed rollout.",
+      "files": [],
+      "expectations": [
+        "Verdict is Block or Fix before merge, in the report format with a findings table and a proposed rollout",
+        "Flags the non-concurrent index build as blocking writes and recommends algorithm: :concurrently with disable_ddl_transaction! in its own migration",
+        "Flags SET NOT NULL as a full scan under ACCESS EXCLUSIVE and gives the CHECK NOT VALID, VALIDATE, SET NOT NULL, drop CHECK sequence",
+        "Requires confirming or backfilling NULLs, and code that always writes the column, before the constraint",
+        "Recommends a lock_timeout with retry, splitting the two operations, and timing on a production-sized copy"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "We need to rename the `users.username` column to `users.handle` in our MySQL 8.4 app. Three services read that table and we do rolling deploys. Write the migrations and the deploy plan.",
+      "expected_output": "Refuses a single-step RENAME COLUMN because running code and the other services still use `username`. Produces an expand/contract plan over several releases: add `handle` (ALGORITHM=INSTANT, lock_wait_timeout set), dual-write or BEFORE INSERT/UPDATE triggers, a batched keyset backfill with a verification query, switch reads in all three services, stop writing `username` and remove it from ORM mappings, then drop `username` after the rollback window (with a data-loss check). Notes MySQL DDL is non-transactional (one DDL per migration, information_schema guards since MySQL lacks ADD COLUMN IF NOT EXISTS) and mentions gh-ost or pt-osc limitations if triggers are used.",
+      "files": [],
+      "expectations": [
+        "Refuses a single-step RENAME COLUMN because running code and three services still use username",
+        "Plans expand and contract over several releases: add handle, dual-write or triggers, batched backfill with verification, switch reads, stop writing, drop",
+        "Uses ALGORITHM=INSTANT with lock_wait_timeout set for the additive step",
+        "Drops username only after the rollback window, with a data-loss check",
+        "Notes MySQL DDL is non-transactional (one DDL per migration, information_schema guards)",
+        "Mentions gh-ost or pt-online-schema-change limitations if triggers are used"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "A teammate's PR edits `migrations/0042_add_status.sql`, which was merged last month, to change `status VARCHAR(20)` to `status VARCHAR(50)`, and adds a new migration that runs `UPDATE accounts SET status = 'active' WHERE status IS NULL;` against our 30M-row accounts table. Review it.",
+      "expected_output": "Critical: editing an already-applied migration. Environments that ran 0042 never pick up the change, so schema drifts (or checksum validation fails). Fix: revert the edit and add a new migration that widens the column (metadata-only for a varchar length increase on PostgreSQL; INPLACE on MySQL only within the same length-byte bucket, so check the charset). High or critical: the single unbatched UPDATE over 30M rows (long row locks, WAL/binlog burst, replica lag, no resume) should become a batched, idempotent, throttled backfill job outside the schema migration, with a verification count. Asks for or states the engine/version assumption, and uses the report format.",
+      "files": [],
+      "expectations": [
+        "Rates editing the already-applied 0042 migration as critical and explains the environment drift or checksum failure",
+        "Fixes it by reverting the edit and adding a new migration that widens the column",
+        "Notes the widening is metadata-only on PostgreSQL and INPLACE on MySQL only within the same length-byte bucket",
+        "Moves the 30M-row UPDATE out of the schema migration into a batched, idempotent, throttled backfill with a verification count",
+        "States or asks for the engine and version, and uses the report format"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Our Postgres 16 `invoices.id` is a `serial` int primary key at 1.9 billion and climbing. Two child tables (`invoice_lines`, `payments`) have foreign keys to it. Give me the migrations and rollout to move it to bigint without downtime.",
+      "expected_output": "Rejects a single `ALTER COLUMN id TYPE bigint` (full rewrite plus index rebuild under ACCESS EXCLUSIVE). Plans the new-column swap: widen the child FK columns first; run `ALTER SEQUENCE ... AS bigint`, noting the serial sequence is AS integer and would otherwise still stop at 2^31-1; add `id_new bigint` with a sync trigger (not app dual-writes, since no app code may name `id_new`); batched keyset backfill; make `id_new` NOT NULL via CHECK NOT VALID, VALIDATE, SET NOT NULL so the later PRIMARY KEY USING INDEX doesn't scan; CREATE UNIQUE INDEX CONCURRENTLY with lock_timeout relaxed for the build. One short swap transaction with a lock timeout that drops (or reverses) the forward trigger before renaming, drops the child FKs and the old PK, drops NOT NULL and the default on the old column, renames, moves the default and sequence ownership (OWNED BY), adds the PK USING INDEX, and re-adds the FKs NOT VALID, then VALIDATE separately. Drops the reverse trigger before the old column after the rollback window, and mentions 64-bit IDs in clients such as JavaScript. Uses the report format's rollout and rollback sections.",
+      "files": [],
+      "expectations": [
+        "Rejects a single ALTER COLUMN id TYPE bigint because it rewrites the table and rebuilds indexes under ACCESS EXCLUSIVE",
+        "Widens the child foreign-key columns first and runs ALTER SEQUENCE ... AS bigint",
+        "Adds id_new with a sync trigger, a batched keyset backfill, and NOT NULL via CHECK NOT VALID and VALIDATE",
+        "Builds the unique index CONCURRENTLY with lock_timeout relaxed for the build",
+        "Swaps in one short transaction with a lock timeout: renames, moves the default and sequence ownership, adds the PK USING INDEX, re-adds FKs NOT VALID",
+        "Mentions 64-bit IDs in JavaScript clients and covers rollback in the report format"
+      ]
+    }
+  ]
+}

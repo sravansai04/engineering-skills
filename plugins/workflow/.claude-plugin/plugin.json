@@ -1,0 +1,19 @@
+{
+  "name": "workflow",
+  "description": "Team workflow around the code: atomic commits with clear messages, pull request descriptions written from the real diff, working through review comments on your own PR, isolated git worktrees for parallel branches and agents, CI failure triage, architecture decision records, and blameless incident postmortems.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Sravan Sai Rahul Nalla"
+  },
+  "keywords": [
+    "git",
+    "commits",
+    "pull-request",
+    "code-review",
+    "worktrees",
+    "ci",
+    "adr",
+    "postmortem",
+    "documentation"
+  ]
+}

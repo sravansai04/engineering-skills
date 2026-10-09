@@ -1,0 +1,44 @@
+{
+  "skill_name": "tdd",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Using TDD, add a function to our Python billing package that prorates a monthly subscription price for a partial first month. Price is a Decimal, start date is a date, and the month length should come from the calendar. Round to cents, half-up.",
+      "expected_output": "Discovers the test command, takes a green baseline, writes a test list, then runs visible red-green-refactor cycles one test at a time, ending with the TDD report.",
+      "files": [],
+      "expectations": [
+        "A test list of behaviors (not implementation steps) is written before the first test",
+        "Each test is run and observed failing for the right reason before the production change, or, if it passed on arrival, is shown failing under a deliberate temporary break of the production code",
+        "Includes boundary cases such as a start on the first day and a start on the last day of the month, and a 28/29/30/31-day month",
+        "Uses Decimal and exact assertions rather than float comparisons",
+        "The final message follows the TDD report template, including the observed red failure per cycle"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Bug report: our TypeScript `isBusinessHours()` helper returns true at 17:00 on Fridays but support closes at 17:00. Write the regression test first, then fix it. The helper currently calls `new Date()` internally.",
+      "expected_output": "Writes a failing regression test that reproduces the 17:00 Friday case deterministically (injected clock or fake timers with a pinned timezone), confirms it fails with the reported symptom, applies a minimal fix, then checks sibling boundaries.",
+      "files": [],
+      "expectations": [
+        "The regression test is run and observed failing before the fix",
+        "Time is made deterministic by injecting the current time or using fake timers with setSystemTime, never real now",
+        "Timezone is pinned or the input is constructed in an explicit timezone",
+        "The test is named after the behavior, with any ticket reference in a comment",
+        "Adds or checks adjacent boundary cases (16:59, 17:00 on other weekdays)"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I'm writing a Go service that charges cards through a third-party payments SDK. How should I test the checkout logic test-first? Should I mock the SDK client?",
+      "expected_output": "Answers the design question directly: a narrow port owned by the service with a fake for unit tests, a thin adapter over the SDK covered by an integration or contract test, and one first failing test against the fake. Does not run the full build workflow or produce the TDD report.",
+      "files": [],
+      "expectations": [
+        "Advises against mocking the third-party SDK types directly and explains why",
+        "Proposes a small interface in the service's own terms plus a hand-written fake with failure injection",
+        "Mentions a contract test run against both the fake and the real adapter",
+        "Shows at least one table-driven or focused Go test written before the implementation",
+        "Answers in test-design mode: no baseline run and no TDD report for an advice question"
+      ]
+    }
+  ]
+}

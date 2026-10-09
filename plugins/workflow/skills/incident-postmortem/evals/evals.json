@@ -1,0 +1,60 @@
+{
+  "skill_name": "incident-postmortem",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Can you turn this into a postmortem? We're in US Pacific time, it was last Tuesday (2026-06-09).\n\n[9:47 AM] deploy-bot: payments-api v412 rolled out to prod\n[10:31 AM] alertbot: PaymentsLatencyHigh FIRING p99 > 2s\n[10:33 AM] priya: ack, looking\n[10:40 AM] priya: db CPU at 95%, lots of seq scans on transactions table\n[10:52 AM] priya: paging dba on-call\n[10:58 AM] marco: new query from v412 is missing the index on merchant_id, created_at\n[11:05 AM] priya: rolling back to v411\n[11:12 AM] priya: latency back to normal\n[11:40 AM] support: ~90 tickets about slow/failed card payments today\n[2:15 PM] marco: added composite index via migration, v413 re-deployed with the query, all good\n\nI don't have exact user counts.",
+      "expected_output": "Produces a postmortem following the template sections (summary, impact, timeline, detection and response, contributing factors, went well, went poorly, got lucky, action items, lessons). Converts every chat time from Pacific (PDT, UTC-7 on that date) to UTC with full dates: e.g. 9:47 AM becomes 2026-06-09 16:47, 10:31 AM becomes 17:31, 11:12 AM becomes 18:12. The timeline starts at the deploy (before the alert), bolds milestones, and cites sources. It notes that impact start must come from the latency SLI rather than the alert time, and marks it TODO(confirm) if unknown. Impact is quantified where possible: about 90 tickets, and a duration bounded rather than guessed. Impact lasted at least 41 minutes (alert at 17:31 to recovery at 18:12 UTC) and at most 85 minutes (deploy at 16:47 to recovery); the exact impact start is TODO(confirm) from the latency SLI. User counts, failed payments, error budget, and revenue are marked TODO(confirm) instead of invented. Because card payments were affected, it records customer, contractual, or regulatory notification as a question to confirm with its owners (TODO(confirm) or an explicit 'not required, per <owner>') rather than skipping it. It states data loss as unknown or to be verified rather than omitting it. Contributing factors go beyond 'missing index': for example, no pre-deploy query-plan or performance check, no alert on DB CPU or seq scans before user latency, and time from detection to DBA escalation. It refers to people by role, not by the names priya and marco, uses no blame wording, and gives action items with a single owner (TODO where unknown), type, priority, due date, a tracking placeholder, and a linked factor. It runs or offers to run scripts/lint_postmortem.py and ends with the report block listing the TODO(confirm) items.",
+      "files": [],
+      "expectations": [
+        "Follows the template sections, from summary through action items and lessons, and runs or offers scripts/lint_postmortem.py, ending with the report block listing the TODO(confirm) items",
+        "Converts Pacific chat times to UTC with full dates (PDT is UTC-7): 9:47 AM becomes 2026-06-09 16:47, 10:31 AM becomes 17:31, 11:12 AM becomes 18:12",
+        "Starts the timeline at the deploy, before the alert, with milestones bolded and sources cited",
+        "Bounds impact duration at 41 to 85 minutes and marks the exact start, user counts, failed payments, and revenue TODO(confirm) instead of inventing them; records customer, contractual, or regulatory notification as a question to confirm, and states data loss as unknown or to be verified",
+        "Goes beyond 'missing index' in contributing factors (no pre-deploy plan check, no DB CPU alert, escalation time)",
+        "Refers to people by role, not by name, uses no blame wording, and gives each action item one owner, a type, priority, due date, and a linked factor"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Here's the postmortem draft for last week's outage, can you review it before I send it to leadership?\n\n# Postmortem: Login outage\n## Summary\nDave pushed a bad config and logins broke for a while.\n## Impact\nSome users couldn't log in.\n## Timeline\n- 3:05pm Dave deploys config\n- 3:20pm customers complain\n- 3:50pm rolled back\n## Root cause\nHuman error. Dave should have tested the config in staging. Obviously the TTL value was wrong.\n## Action items\n- Be more careful with config changes (team)\n- Improve monitoring",
+      "expected_output": "Reviews rather than rewrites from scratch, with findings ordered by importance and a concrete rewrite for each. Flags: an individual named next to an error, and 'human error' as the root cause; counterfactual and hindsight wording ('should have', 'Obviously'); unquantified impact ('some users', 'a while') with no duration, user counts, or error rate; a timeline with local 12-hour times, no dates, no time zone, and no sources, which starts with the change but has no detection, acknowledgement, or mitigation milestones; detection by customers 15 minutes after the change, with no alert; missing sections (what went well, what went poorly, where we got lucky, lessons learned); and action items with no single owner, due date, priority, tracking link, or factor link, including 'be more careful' and 'improve monitoring' as weak or vague actions. Suggests systemic factors to explore, such as no config validation, no staged rollout, and no login-failure alert, plus stronger replacement actions. May run scripts/lint_postmortem.py on the draft and report its output. Doesn't invent missing facts.",
+      "files": [],
+      "expectations": [
+        "Reviews the draft rather than rewriting it, with findings ordered by importance and a concrete rewrite for each",
+        "Flags naming an individual next to the error and 'human error' as the root cause",
+        "Flags hindsight and counterfactual wording such as 'should have' and 'Obviously'",
+        "Flags unquantified impact and a timeline with no dates, time zone, sources, or detection and mitigation milestones",
+        "Flags missing sections and action items with no owner, due date, priority, or tracking link, including 'be more careful'",
+        "Suggests systemic factors (no config validation, no staged rollout, no login-failure alert) and does not invent facts"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Our API is throwing 500s on about a third of requests right now and the team is still digging in. Can you start the postmortem so we have it ready?",
+      "expected_output": "Recognizes the incident is still in progress and declines to draft the postmortem analysis now, explaining that mitigation comes first. Offers to act as scribe instead: a running UTC timeline of observations, actions, and decisions with sources, and capturing perishable evidence such as orchestrator events, logs from restarting pods, and dashboard snapshots with absolute time ranges. May suggest the debug-root-cause skill or mitigation steps such as checking and rolling back recent changes. Doesn't produce contributing factors, a root cause, or action items yet.",
+      "files": [],
+      "expectations": [
+        "Recognizes the incident is still in progress and does not draft the postmortem analysis yet",
+        "Explains that mitigation comes first",
+        "Offers to act as scribe: a running UTC timeline of observations, actions, and decisions, with sources",
+        "Suggests capturing perishable evidence such as orchestrator events, pod logs, and dashboard snapshots with absolute time ranges",
+        "Produces no contributing factors, root cause, or action items yet"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "I'm facilitating the post-incident review for our SEV-1 database failover tomorrow. The engineer who ran the failover command is pretty shaken up. How should I run the meeting?",
+      "expected_output": "Gives a concrete plan: send the draft at least a day ahead; invite responders, system owners, and a manager who can commit capacity; the facilitator is not the engineer's manager and holds back their own opinions; there is a note-taker; and a timeboxed agenda of roughly 60 minutes covering opening and ground rules, summary, decision-point walkthrough, factors, action items, and lessons. Includes opening remarks stating the blameless ground rules in its own words. Recommends talking privately to the affected engineer beforehand and following up afterwards, and gives redirect phrasing for when blame or self-blame comes up. Recommends 'what' and 'how' questions over 'why did you', walking decisions forward in time, and closing with owned, ticketed action items. Doesn't name or assign fault to the engineer.",
+      "files": [],
+      "expectations": [
+        "Gives a concrete plan: send the draft at least a day ahead and invite responders, system owners, and a manager who can commit capacity",
+        "The facilitator is not the engineer's manager, holds back their own opinions, and has a note-taker",
+        "Provides a timeboxed agenda of about 60 minutes and opening remarks stating blameless ground rules",
+        "Recommends a private conversation with the affected engineer before and after, and gives redirect phrasing for blame or self-blame",
+        "Prefers 'what' and 'how' questions to 'why did you', walks decisions forward in time, and closes with owned action items",
+        "Does not name or assign fault to the engineer"
+      ]
+    }
+  ]
+}

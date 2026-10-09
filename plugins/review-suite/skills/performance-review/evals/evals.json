@@ -1,0 +1,100 @@
+{
+  "skill_name": "performance-review",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Can you review this for performance before I merge? It's a new endpoint in our Django app. Most customers have a few dozen projects, but our biggest one has ~40k.\n\n```python\n# api/views.py\nclass ProjectListView(APIView):\n    def get(self, request):\n        projects = Project.objects.filter(org=request.user.org)\n        data = []\n        for p in projects:\n            data.append({\n                \"id\": p.id,\n                \"name\": p.name,\n                \"owner\": p.owner.email,\n                \"open_tasks\": Task.objects.filter(project=p, done=False).count(),\n            })\n        return Response(data)\n```",
+      "expected_output": "A report in the skill's format. It states a scale profile (median tens of projects, tail ~40k). It flags the N+1 (the lazy owner FK plus a per-project COUNT, so 1 + 2N queries, about 80k queries for the largest org) with a numeric estimate, and the missing pagination or unbounded result set as a separate finding. Fixes are concrete: select_related('owner'), annotate(open_tasks=Count('task', filter=Q(task__done=False))) or the equivalent, and a server-enforced page size. It proposes a query-count test as verification, gives severities driven by the 40k tail (critical or high), and includes a 'Checked, no concerns' or 'Questions' section. It doesn't flag micro-optimizations such as the list append.",
+      "files": [],
+      "expectations": [
+        "States a scale profile with the median (tens of projects) and the ~40k tail",
+        "Flags the N+1 from the lazy owner lookup and the per-project count as 1 + 2N queries, about 80k for the largest org",
+        "Flags the unbounded, unpaginated result as a separate finding",
+        "Gives concrete fixes: select_related('owner'), an annotated count, and a server-enforced page size",
+        "Proposes a query-count test as verification and rates the findings critical or high because of the tail",
+        "Does not flag the list append or other micro-optimizations"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "perf review pls - this runs in our order service (node, ~150 req/s, pg pool size 20 per pod, 4 pods)\n\n```ts\nexport async function confirmOrder(orderId: string) {\n  await db.$transaction(async (tx) => {\n    const order = await tx.order.findUniqueOrThrow({ where: { id: orderId } });\n    const charge = await stripeLikeClient.charge({ amount: order.total, customer: order.customerId });\n    await tx.order.update({ where: { id: orderId }, data: { status: 'paid', chargeId: charge.id } });\n    const users = await tx.user.findMany({ where: { orgId: order.orgId } });\n    await Promise.all(users.map((u) => mailer.send(u.email, 'Order confirmed', render(order))));\n  });\n}\n```",
+      "expected_output": "Flags the transaction held open across the external charge call and the email sends as the top finding (critical or high), with a Little's Law estimate: 150 req/s × the charge latency set against 80 total connections (20 × 4 pods), showing pool exhaustion when the dependency slows. Notes that Prisma's interactive `$transaction` has a 5-second default timeout, so a slow charge or a large email fan-out rolls the transaction back after the card has already been charged, leaving the customer charged and the order not marked paid. Flags unbounded Promise.all fan-out of emails to every user in the org, inside the request and inside the transaction, with a recommendation to move it to a background job enqueued after commit, idempotently. Notes the missing timeout and retry or idempotency handling on the charge call. Gives concrete restructured code: short transactions, the charge outside any transaction with an idempotency key and a timeout, a conditional final transition (only from the pending state), and emails via a queue. States the recovery path for a crash between the charge and the final write (a reconciler re-driving stuck pending orders with the same idempotency key, or the provider's webhook as the source of truth). Every finding has an estimated impact, a 'Breaks at' point, and a verification step.",
+      "files": [],
+      "expectations": [
+        "Reports the transaction held open across the charge call and email sends as the top finding, rated critical or high",
+        "Uses Little's Law: 150 req/s times the charge latency against 80 pooled connections (20 x 4 pods)",
+        "Notes the 5-second default timeout of Prisma's interactive transaction, which can roll back after the card was charged",
+        "Flags the unbounded Promise.all email fan-out and moves it to a job enqueued after commit",
+        "Restructures the code: charge outside any transaction with an idempotency key and timeout, then a conditional transition from pending",
+        "States the recovery path for a crash between the charge and the final write, and gives every finding a Breaks at point and a verification step"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "This PR claims a 40% speedup in our hot path. Is it legit? Here's the description and benchmark.\n\nPR: 'Replace for-loops with Array.prototype.reduce and cache array length for 40% faster price calculation'\n\n```js\nconsole.time('calc');\nfor (let i = 0; i < 1000; i++) calculatePrices([{ price: 10, qty: 2 }]);\nconsole.timeEnd('calc');\n// before: 0.52ms, after: 0.31ms\n```",
+      "expected_output": "Doesn't accept the claim as evidence. Explains why the benchmark is invalid: a single run, no warm-up or JIT steady state, a one-element constant input that isn't realistic in size, results unused (dead-code elimination risk), timer resolution and noise at sub-millisecond totals, and no variance reported. Asks for a proper benchmark with a harness (e.g. vitest bench, tinybench, or mitata) at realistic input sizes with repeated runs, plus end-to-end context (Amdahl's law: how much of the request time this function represents). Doesn't invent new micro-optimization findings. The verdict carries the (needs measurement) qualifier, for example 'Fix before merge (needs measurement)', possibly noting that the change is harmless if it's also readable.",
+      "files": [],
+      "expectations": [
+        "Does not accept the benchmark as evidence of a speedup",
+        "Names at least three flaws: single run, no warm-up, unrealistic one-element input, unused results, or timer noise at sub-millisecond totals",
+        "Asks for a real benchmark harness at realistic input sizes with repeated runs and variance",
+        "Asks how much of the request time the function represents (Amdahl's law)",
+        "Verdict carries the (needs measurement) qualifier",
+        "Does not invent new micro-optimization findings"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "can you check if this will hurt page load? it's the orders page in our Vite + React app, shows up to 200 orders\n\n```tsx\nimport _ from 'lodash';\nimport { useEffect, useState } from 'react';\n\nexport function OrderList({ orderIds }: { orderIds: string[] }) {\n  return <ul>{orderIds.map((id) => <OrderRow key={id} id={id} />)}</ul>;\n}\n\nfunction OrderRow({ id }: { id: string }) {\n  const [order, setOrder] = useState<any>(null);\n  useEffect(() => {\n    fetch(`/api/orders/${id}`).then((r) => r.json()).then(setOrder);\n  }, [id]);\n  if (!order) return <li>Loading...</li>;\n  return <li>{_.startCase(order.customerName)} - {_.round(order.total, 2)}</li>;\n}\n```",
+      "expected_output": "A report in the skill's format that reviews the pasted code without running git on an unrelated repository. Flags the client-side N+1 as the top finding: up to 200 per-row fetches after the list renders, each also costing a server request and query, with an estimate and a named Core Web Vital (LCP for the page's main content, and layout shift as rows resolve). Fix: one list request returning the joined rows, fetched at the route or parent level. Flags the whole-library lodash import used for two helpers as a bundle finding, with the fix (per-function imports, lodash-es, or native code) and an analyzer command that fits Vite (e.g. rollup-plugin-visualizer) to measure before and after. May note the missing AbortController or cleanup on unmount. Doesn't demand blanket memoization, and doesn't insist on virtualization for 200 simple rows without evidence.",
+      "files": [],
+      "expectations": [
+        "Reviews the pasted code without running git against an unrelated repository",
+        "Reports the client-side N+1 (up to 200 per-row fetches) as the top finding, with an estimate and a named Core Web Vital",
+        "Recommends one list request fetched at the route or parent level",
+        "Flags the whole-library lodash import, with a fix and a Vite-compatible analyzer to measure it",
+        "Does not demand blanket memoization or virtualization for 200 simple rows"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "perf review? this is our ingest worker, a long-running node process that stays up for weeks. uploads are newline-delimited JSON, usually a few MB but some customers send 3-4 GB files\n\n```js\nconst fs = require('node:fs/promises');\nconst seen = new Map(); // ids we've already saved, so we can skip duplicates\n\nexport async function handleUpload(job) {\n  const buf = await fs.readFile(job.path);\n  const rows = buf.toString('utf8').split('\\n');\n  for (const row of rows) {\n    if (!row) continue;\n    const rec = JSON.parse(row);\n    if (seen.has(rec.id)) continue;\n    seen.set(rec.id, rec);\n    await saveRecord(rec);\n  }\n}\n```",
+      "expected_output": "Flags reading the whole upload into memory (buffer, then one string, then an array of lines, so several copies at once) as critical for the multi-GB tail, and ideally notes that files this large can fail outright in Node (fs.readFile's 2 GiB limit, and V8's maximum string length) rather than only being slow. Fix: stream the file line by line (fs.createReadStream with readline, or a stream pipeline) so memory stays flat. Flags the module-level `seen` Map as unbounded growth in a long-lived process that also retains whole records: fix with a bounded LRU or TTL cache keyed by id only, or better, move dedup into the database with a unique constraint and upsert. Flags the per-row awaited saveRecord as I/O in a loop and recommends batched inserts in bounded chunks. Each finding has a numeric estimate tied to file size, a Breaks at point, and a verification step such as a heap snapshot or memory measurement over repeated runs.",
+      "files": [],
+      "expectations": [
+        "Rates reading the whole upload into memory as critical for the multi-GB tail",
+        "Notes that very large files can fail outright (fs.readFile's 2 GiB limit or V8's maximum string length)",
+        "Recommends streaming the file line by line so memory stays flat",
+        "Flags the module-level seen Map as unbounded growth and recommends a bounded cache or a database unique constraint with upsert",
+        "Flags the per-row awaited save as I/O in a loop and recommends bounded batched inserts",
+        "Gives each finding an estimate tied to file size, a Breaks at point, and a verification step such as a heap snapshot"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "added a redis cache in front of the dashboard summary because it was taking ~3s. good to merge? we have ~2k orgs and this is the landing page after login\n\n```python\n@app.get(\"/dashboard/summary\")\ndef dashboard_summary(request):\n    rng = request.args.get(\"range\", \"30d\")\n    key = f\"dashboard-summary:{rng}\"\n    cached = redis.get(key)\n    if cached:\n        return json.loads(cached)\n    summary = build_summary(org_id=request.user.org_id, range=rng)  # ~3 s of aggregate queries\n    redis.set(key, json.dumps(summary), ex=300)\n    return summary\n```",
+      "expected_output": "Flags the cache key missing the org id as the top finding: one org's dashboard is served to every other org, which is a data leak and a correctness bug, not just a performance issue. It is critical, with a pointer to the security review skill. Notes the stampede: when the hot key expires every 5 minutes, all concurrent landing-page requests for that org run the ~3 s aggregate at once, with an estimate tied to login traffic. Mitigations are request coalescing or a short lock, stale-while-revalidate, or TTL jitter. Also raises at least one of: no invalidation when the underlying data changes (the TTL is the only plan), unvalidated `range` letting clients create unbounded keys, and behavior when Redis is slow or down (client timeout, fallback). Recommends asking whether the 3 s aggregate itself should be fixed, since the miss path stays slow. Verdict: Block.",
+      "files": [],
+      "expectations": [
+        "Reports the cache key missing the org id as the top finding: one org's dashboard is served to other orgs",
+        "Rates it critical and points to the security review skill",
+        "Explains the stampede when the hot key expires and offers coalescing, a short lock, stale-while-revalidate, or TTL jitter",
+        "Raises at least one of: no invalidation on writes, unvalidated range creating unbounded keys, or behavior when Redis is slow or down",
+        "Asks whether the 3-second aggregate itself should be fixed",
+        "Verdict is Block"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "quick perf check on this before I merge? it's for the calendar week view. it's always one user and one week, so at most ~14 events.\n\n```ts\nexport function weekTotals(days: Day[], events: CalendarEvent[]) {\n  // days is always the 7 days of the selected week\n  return days.map((d) => ({\n    date: d.date,\n    hours: events\n      .filter((e) => e.date === d.date)\n      .reduce((sum, e) => sum + e.hours, 0),\n  }));\n}\n```",
+      "expected_output": "Verdict Merge, with an empty Findings section. 'Checked, no concerns' explains that the filter inside map is O(7 × m) over at most ~14 events, about 100 comparisons, so it is negligible, and notes the bound it relies on (one user, one week). Doesn't suggest micro-optimizations such as grouping events into a Map, replacing filter/reduce with a for loop, or memoization. May ask one question to confirm the bound holds if the function is ever reused for team or month views.",
+      "files": [],
+      "expectations": [
+        "Verdict is Merge with an empty Findings section",
+        "Explains in Checked, no concerns that filter inside map is about 7 x 14 comparisons and names the bound it relies on (one user, one week)",
+        "Does not suggest grouping into a Map, a for loop, or memoization",
+        "May ask one question about reuse for team or month views, and asks nothing else"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+/* Example token stylesheet. pairs.example.json points here with "$css", so token-contrast.mjs
+   resolves every pair from these declarations. Primitives first, then semantic roles; the dark
+   theme remaps semantic roles only. Replace with the path to your real token file. */
+
+:root {
+  color-scheme: light;
+
+  /* primitives: raw ramps, never referenced by components */
+  --palette-white: #ffffff;
+  --palette-neutral-0: oklch(0.99 0.004 255);
+  --palette-neutral-50: oklch(0.955 0.006 255);
+  --palette-neutral-100: oklch(0.94 0.008 255);
+  --palette-neutral-300: oklch(0.76 0.015 255);
+  --palette-neutral-400: oklch(0.62 0.015 255);
+  --palette-neutral-500: oklch(0.55 0.015 255);
+  --palette-neutral-600: oklch(0.47 0.02 255);
+  --palette-neutral-850: oklch(0.26 0.014 255);
+  --palette-neutral-900: oklch(0.24 0.02 255);
+  --palette-neutral-950: oklch(0.2 0.012 255);
+  --palette-blue-200: oklch(0.8 0.1 255);
+  --palette-blue-300: oklch(0.74 0.13 255);
+  --palette-blue-500: oklch(0.55 0.18 255);
+  --palette-blue-600: oklch(0.52 0.16 255);
+  --palette-blue-700: oklch(0.47 0.14 255);
+  --palette-blue-950: oklch(0.18 0.03 255);
+  --palette-red-300: oklch(0.74 0.15 25);
+  --palette-red-600: oklch(0.52 0.19 27);
+  --palette-orange-300: oklch(0.78 0.13 60);
+  --palette-orange-600: oklch(0.6 0.13 55);
+  --palette-black-a55: oklch(0 0 0 / 0.55);
+
+  /* semantic roles: what components use */
+  --color-surface-canvas: var(--palette-neutral-0);
+  --color-surface-sunken: var(--palette-neutral-50);
+  --color-surface-raised: var(--palette-neutral-0);
+  --color-text-primary: var(--palette-neutral-900);
+  --color-text-secondary: var(--palette-neutral-600);
+  --color-text-on-accent: var(--palette-white);
+  --color-text-danger: var(--palette-red-600);
+  --color-accent-rest: var(--palette-blue-600);
+  --color-accent-hover: var(--palette-blue-700);
+  --color-border-control: var(--palette-neutral-400);
+  --color-border-focus: var(--palette-blue-500);
+  --color-scrim: var(--palette-black-a55);
+  --color-chart-1: var(--palette-blue-500);
+  --color-chart-2: var(--palette-orange-600);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --color-surface-canvas: var(--palette-neutral-950);
+  --color-surface-raised: var(--palette-neutral-850);
+  --color-text-primary: var(--palette-neutral-100);
+  --color-text-secondary: var(--palette-neutral-300);
+  --color-text-on-accent: var(--palette-blue-950);
+  --color-text-danger: var(--palette-red-300);
+  --color-accent-rest: var(--palette-blue-300);
+  --color-accent-hover: var(--palette-blue-200);
+  --color-border-control: var(--palette-neutral-500);
+  --color-border-focus: var(--palette-blue-300);
+  --color-chart-1: var(--palette-blue-300);
+  --color-chart-2: var(--palette-orange-300);
+}
