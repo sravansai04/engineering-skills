@@ -3,9 +3,9 @@
 Read this before the first paid run (steps 3, 6 and 7 of SKILL.md). Two placeholders recur:
 
 - `<scratch>` is the private temp directory created in step 1.
-- `<checker>` is the absolute path of this skill's `scripts/trigger_check.py`, which SKILL.md printed in step 1. This file is not pre-processed the way SKILL.md is, so no variable here would expand; paste the real path.
+- `<checker>` is the absolute path of `scripts/trigger_check.py` in this skill's folder (in Claude Code, the path SKILL.md shows in step 1). This file is not pre-processed the way SKILL.md is, so no variable here would expand; paste the real path.
 
-Every block below is self-contained: each Bash tool call starts a fresh shell, so a block never relies on a variable set in another one. Run them from the repo root. Every flag is a documented Claude Code CLI flag; if one errors on your version, check `claude --help` and upgrade rather than improvising a substitute.
+Everything here drives the Claude Code CLI (`claude`), whichever agent you author in; SKILL.md steps 6 and 7 say what to do without it. Every block below is self-contained: an agent may start a fresh shell for each command (Claude Code's Bash tool does), so a block never relies on a variable set in another one. Run them from the repo root. Every flag is a documented Claude Code CLI flag; if one errors on your version, check `claude --help` and upgrade rather than improvising a substitute.
 
 Contents:
 1. What a fresh session loads, and the listing budget
@@ -42,7 +42,7 @@ What follows from that:
   - The init event's `skills` list always includes your skill, so "loaded" does not mean "its description was visible".
   - Results depend on the model: recent CLIs logged a budget of about 8,000 characters on a 200K-context model and about 30,000 on a 1M-context model, so `--model haiku` and a 1M default can disagree for this reason alone.
   - Results depend on the contributor's own invocation history and personal skills, which decide what else survives.
-  - To see the state: the debug log (`--debug` or `--debug-file <path>`) contains `Skill listing over budget: N skills, C chars > B budget` when it is over; in an interactive session, `/context` shows the Skills row after the budget is applied and `/doctor` estimates the biggest contributors. The checker reads the debug log for you and prints a `Listing:` line.
+  - To see the state: the debug log (`--debug` or `--debug-file <path>`) contains `Skill listing over budget: N skills, C chars > B budget` when it is over; in an interactive Claude Code session, `/context` shows the Skills row after the budget is applied and `/doctor` estimates the biggest contributors. The checker reads the debug log for you and prints a `Listing:` line.
   - To change it: the `skillListingBudgetFraction` setting (`0.02` = 2%), or the `SLASH_COMMAND_TOOL_CHAR_BUDGET` environment variable as a fixed character count (the checker's `--listing-budget` sets it); `skillListingMaxDescChars` changes the per-entry cap; `skillOverrides` can list a low-priority skill as `"name-only"`. These are user-side settings; a skill cannot rely on users changing them.
 - **Personal skills still compete.** That is realistic, but it makes results machine-specific. Record the init skill list in the worksheet header when a personal skill fires on your prompts.
 - **Do not use `--bare` or `--safe-mode` for trigger tests.** Both change what loads (and `--bare` changes authentication), so the result no longer reflects a real user's session.

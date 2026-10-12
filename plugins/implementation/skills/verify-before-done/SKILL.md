@@ -34,6 +34,8 @@ List the acceptance criteria from the request (and the plan, if `implementation:
 
 Use the commands the project already defines; wrappers such as `make check` carry its configuration. Trust CI configuration first (it gates the merge), then agent and contributor docs (`AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, README), then task runners and manifests, and tool defaults last.
 
+`${CLAUDE_SKILL_DIR}` stands for this skill's folder, the directory that contains this SKILL.md. Claude Code fills it in; in other tools, use that folder's path.
+
 ```bash
 bash "${CLAUDE_SKILL_DIR}/scripts/discover-checks.sh"               # current directory
 bash "${CLAUDE_SKILL_DIR}/scripts/discover-checks.sh" packages/api  # a sub-project
@@ -198,7 +200,7 @@ Write "n/a" for a section that truly does not apply rather than deleting it. Fil
 - `workflow:ci-failure-triage` when CI goes red after you push, and `workflow:git-worktrees` for the merge-base worktree used to prove a failure pre-existing.
 - `workflow:commit-message` and `workflow:pr-description` once the work is verified.
 
-If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
+Skills are named here as `plugin:skill`; an agent that lists skills by bare name knows each one by the part after the colon (`review-suite:pr-review` is `pr-review`). If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
 
 ## Reference files
 

@@ -1,7 +1,6 @@
 ---
 name: ci-failure-triage
 description: "Triages a red CI run or PR check: finds the first real error, decides with evidence whether the change caused it, reproduces it with CI's setup, and fixes the cause instead of retrying or skipping. Use for \"CI is failing\", \"the build is red\", \"passes locally but fails in CI\", \"is this CI failure flaky\", or a pasted job log. Not for a failure that reproduces locally (debug-root-cause), a flaky e2e spec (browser-testing), checking your own change (verify-before-done), or code review (pr-review)."
-argument-hint: "[PR number, run ID, job URL, or pasted log]"
 allowed-tools: Read, Grep, Glob, Bash(gh pr checks:*), Bash(gh pr view:*), Bash(gh run list:*), Bash(gh run view:*), Bash(gh cache list:*), Bash(gh ruleset check:*), Bash(glab ci get:*), Bash(glab ci list:*), Bash(glab ci trace:*), Bash(git log:*), Bash(git diff:*), Bash(git show:*), Bash(git ls-files:*), Bash(git status:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git fetch:*)
 ---
 
@@ -9,7 +8,7 @@ allowed-tools: Read, Grep, Glob, Bash(gh pr checks:*), Bash(gh pr view:*), Bash(
 
 Get a red pipeline to an honest green. Find the error that actually broke the build, decide with evidence whether the change under test caused it, reproduce it with CI's own commands, and fix the cause. Retrying, skipping or loosening an assertion can turn the badge green and leave the defect behind, so every conclusion here has to rest on a log line, a run, or a reproduction.
 
-Input: $ARGUMENTS. If it is a PR number, run ID, job URL or pasted log, start there. If it is empty, start from the PR for the current branch.
+Input: the skill's arguments, meaning what the user passed when invoking this skill (in Claude Code, typed arguments appear after ARGUMENTS: at the end of this skill). If they are a PR number, run ID, job URL or pasted log, start there. If none were given, take the PR number, run ID, job URL or pasted log from the user's message; only when it names none, start from the PR for the current branch.
 
 **Read freely; ask before acting where others can see.** Reading logs, configs and run history, and reproducing locally once the trust gate in step 6 allows it, need no approval. Before any action other people can see or that spends shared CI capacity (re-running jobs, pushing or force-pushing, opening or commenting on issues, editing CI config or branch protection, quarantining a test), say what you intend and wait for the user's go-ahead. An explicit request such as "push a fix" is the go-ahead for that action only. `gh run download` isn't pre-approved because it writes files; point it outside the checkout, for example `-D /tmp/ci-artifacts`.
 
@@ -179,7 +178,7 @@ Report in this shape, and mark anything you didn't verify as unverified:
 - `workflow:git-worktrees` for the scratch worktree that reproduces the run: where to put it, its setup, and its cleanup.
 - `review-suite:secure-code-review` when the red job is a security scanner and the finding needs judging.
 
-If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
+Skills are named here as `plugin:skill`; an agent that lists skills by bare name knows each one by the part after the colon (`review-suite:pr-review` is `pr-review`). If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
 
 ## Reference files
 

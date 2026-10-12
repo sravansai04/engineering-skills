@@ -1,8 +1,8 @@
 ---
 name: build-feature
 description: "Builds a multi-file feature from request to a verified, review-ready change in gated phases: read-only exploration, only the questions code cannot answer, a design choice, a plan, test-first commits, an independent review. Use for \"implement this ticket\", \"build X end to end\", \"add CSV export to the orders page\", \"build this properly\". Not for plan-only requests (plan-feature), an existing plan (execute-plan), vague ideas (brainstorm-spec), or bugs (debug-root-cause)."
-argument-hint: "[feature request, ticket text, or issue link]"
 allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git show:*), Bash(git grep:*), Bash(git blame:*), Bash(git fetch:*), Bash(git merge-base:*), Bash(git rev-parse:*), Bash(git symbolic-ref:*), Read, Grep, Glob
+compatibility: Needs git. Works best in an agent that can run subagents (such as Claude Code's Agent tool or OpenCode's subagents); without them the explorers, design sketches and the independent review run one after another in one session.
 ---
 
 # Build Feature
@@ -16,8 +16,9 @@ running artifact, the **feature brief**, that ties the request to the tests
 and the final evidence. The depth lives in sibling skills; this file decides
 *when* and *in what order* to call them.
 
-The feature request is `$ARGUMENTS`. If that is empty, take it from the
-conversation.
+The feature request is the skill's arguments
+(in Claude Code, typed arguments appear after ARGUMENTS: at the end of this skill).
+If none were given, take it from the conversation.
 
 ## The run at a glance
 
@@ -38,8 +39,10 @@ is not installed, do that step inline at the depth given in
 [references/delegation.md](references/delegation.md) §1 and name it in the
 report's "Done inline" line. A missing sibling never means a skipped step.
 
-Track the phases with the session's task tool if one exists (one task per
-phase), and start every checkpoint message with a tag such as
+Track the phases with your agent's task list if it offers one (TaskCreate and
+TaskUpdate in Claude Code, on models where they are enabled), otherwise a
+checklist in the conversation (one item per phase), and start every checkpoint
+message with a tag such as
 `[build-feature · Phase 3/8 Clarify · size M]` so the user always knows where
 the run stands.
 
@@ -131,9 +134,10 @@ would be aimed in the wrong direction, ask now (checkpoint G1) or hand off to
 ### 2. Explore the code before forming opinions
 
 For S, explore yourself. For M, dispatch two or three read-only explorer
-subagents; for L, three or four (adding angle D). Send them **in a single
-message** (several Agent tool calls side by side) so they run concurrently,
-each on a distinct angle:
+subagents; for L, three or four (adding angle D). This needs an agent that can
+run subagents, such as Claude Code's Agent tool or OpenCode's subagents. Start
+them all at once (in Claude Code, **in a single message**: several Agent tool
+calls side by side) so they run concurrently, each on a distinct angle:
 
 | Angle | Question it answers |
 |-------|---------------------|
@@ -163,8 +167,9 @@ When they return:
   dependency versions, constraints and risks, and the questions only the user
   can answer.
 
-Without a subagent tool, run the same angles yourself, starting with C so you
-know how to run tests before you need to, and time-box each one.
+Without a subagent tool, run the same angles yourself, one after another in
+this session, starting with C so you know how to run tests before you need to;
+time-box each one, and say in the G2 message that exploration ran sequentially.
 
 ### 3. Clarify what the code cannot answer (checkpoint G2)
 
@@ -187,7 +192,8 @@ summary of the codebase map (this folds G1 into G2 and saves a round trip).
 Then **end your turn and wait**. A question you answer yourself in the same
 message is not a checkpoint. Silence or a timed-out prompt is not approval.
 
-A multiple-choice tool such as `AskUserQuestion` suits discrete choices, but
+Ask with a structured-question tool if your agent has one (AskUserQuestion in
+Claude Code), otherwise ask in chat. AskUserQuestion suits discrete choices, but
 it holds at most four questions per call and is unavailable inside subagents;
 with more, send one numbered plain-text message (details in
 [references/checkpoint-templates.md](references/checkpoint-templates.md)).
@@ -229,7 +235,7 @@ release"). The comparison template is in
   preamble's no-write clause, and ask for the sketch back as text: files to
   touch, signatures, test strategy, the hardest part, optionally a
   pseudo-diff. Never as files written to the repo. Compare the sketches
-  yourself.
+  yourself. Without subagents, sketch each option yourself in turn.
 
 Wait for the user to choose. Do not start Phase 6 on a design the user has
 not approved.
@@ -358,8 +364,9 @@ the fixes it asked for.
    `review-suite:performance-review` (hot paths, large data),
    `data-api:query-review` (queries), `frontend:accessibility-review` (UI).
    For S, self-review is enough unless the user asks for more. Without a
-   subagent tool, report this phase as "self-review only" and recommend a
-   human reviewer as a follow-up.
+   subagent tool, run the same brief yourself, one lens after another,
+   report this phase as "self-review only" (independence is reduced), and
+   recommend a human reviewer as a follow-up.
 4. **Triage every finding**: **fix** it (with a test if behavior changes),
    **dispute** it with evidence, or **defer** it to a named follow-up. Before
    fixing, classify the fix with the Phase 6 deviation protocol: a fix that
@@ -428,7 +435,7 @@ three are easy to make even while following them:
   `frontend:browser-testing`, `workflow:pr-description`,
   `workflow:ci-failure-triage`, `workflow:respond-to-review`.
 
-If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
+Skills are named here as `plugin:skill`; an agent that lists skills by bare name knows each one by the part after the colon (`review-suite:pr-review` is `pr-review`). If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
 
 ## Reference files
 

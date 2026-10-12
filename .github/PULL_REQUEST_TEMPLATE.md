@@ -34,7 +34,8 @@
 - [ ] Every command, flag, threshold and claim I added was checked by running it or against current documentation, not recalled.
 - [ ] Trigger evals are updated on both sides: new phrasings are `should_trigger: true` here, and near misses that belong to a sibling skill are `false` here and `true` in that skill.
 - [ ] `evals/evals.json` cases have checkable `expectations`, and the before and after above comes from one of them.
-- [ ] The skill follows the conventions in CONTRIBUTING.md: the body skeleton, a description ending in a "Not for X (sibling)" list, `plugin:skill` references, the exact Related-skills fallback sentence, shared blocks unchanged or updated in every copy, and any bundled script supports `-h`/`--help` and `--selftest`.
+- [ ] Portable: the frontmatter uses only the Agent Skills spec fields (no `argument-hint`), there is no `$ARGUMENTS` literal in `SKILL.md` or a reference file, and any `${CLAUDE_SKILL_DIR}` use is explained by the standard sentence.
+- [ ] The skill follows the conventions in CONTRIBUTING.md: the body skeleton, a description ending in a "Not for X (sibling)" list, `plugin:skill` references, the exact Related-skills fallback sentence, a fallback wherever a step relies on a Claude Code-only tool, shared blocks unchanged or updated in every copy, and any bundled script supports `-h`/`--help` and `--selftest`.
 - [ ] No secrets, credentials, real hostnames, or employer, customer or other proprietary content. Fixtures are obviously fake.
 - [ ] `allowed-tools` stays read-only, and nothing destructive or outward-facing happens without the user's confirmation.
 - [ ] The text is my own words, not copied from another skill collection or vendor docs.

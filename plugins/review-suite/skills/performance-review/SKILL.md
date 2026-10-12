@@ -1,7 +1,6 @@
 ---
 name: performance-review
 description: "Reviews a change, PR, or module for how its cost grows at 10x to 1000x data and traffic: N+1s, unbounded queries, quadratic work, memory growth, cache and timeout flaws, pool contention, and frontend load, each with an impact estimate and a fix. Use for \"will this scale\", \"find N+1s in this PR\", \"review this for performance\". Not for a live slowdown (debug-root-cause), one query or plan (query-review), or migration locking (db-migration-safety)."
-argument-hint: "[PR number, branch, commit range, or path]"
 allowed-tools: Bash(git diff:*), Bash(git log:*), Bash(git show:*), Bash(git grep:*), Bash(git merge-base:*), Bash(git fetch:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), Bash(git ls-files:*), Bash(gh pr view:*), Bash(gh pr diff:*), Bash(gh repo view:*), Read, Grep, Glob
 ---
 
@@ -16,8 +15,8 @@ Review a change for how its cost grows, not for how clever its inner loop is. Mo
 Use the first case that applies:
 
 - **Code or a diff pasted into the conversation.** Review exactly that, and don't run git against whatever repository happens to be open. When the cost depends on context you can't see ("is this function called in a loop?", "how long can this list get?"), ask, or write the assumption into the scale profile.
-- **An argument (`$ARGUMENTS`).** A PR number, branch, range, or path, resolved as below.
-- **Neither.** Review the current branch against its base.
+- **The skill's arguments, or a target named in the user's message**: what the user passed when invoking this skill (in Claude Code, typed arguments appear after ARGUMENTS: at the end of this skill), or a PR number, branch, range, or path the message names. Resolved as below.
+- **None of these.** Review the current branch against its base.
 
 Resolving each kind of target:
 
@@ -255,7 +254,7 @@ Not flagged: the same PR swaps a `for` loop for `.map()` over the 100 serialized
 - `review-suite:secure-code-review` as well when user-controlled input can exhaust resources (huge page sizes, catastrophic regex, decompression bombs): report it here too, because it is a denial-of-service issue.
 - `workflow:git-worktrees` for the head and base worktrees a measurement runs in.
 
-If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
+Skills are named here as `plugin:skill`; an agent that lists skills by bare name knows each one by the part after the colon (`review-suite:pr-review` is `pr-review`). If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
 
 ## Reference files
 

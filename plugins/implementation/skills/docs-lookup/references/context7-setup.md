@@ -12,12 +12,15 @@ October 2026. Setup flows for hosted services change, so confirm against
 
 ## Check whether it is already connected
 
+In Claude Code:
+
 ```bash
 claude mcp list        # configured MCP servers and their connection status
 claude plugin list     # installed plugins (the server may come from a plugin)
 ```
 
-Inside a session, `/mcp` shows server status and handles sign-in for servers that need it.
+Inside a Claude Code session, `/mcp` shows server status and handles sign-in for servers
+that need it. Other agents list their MCP servers in their own settings or commands.
 
 ## Setup options for Claude Code (pick one)
 
@@ -28,8 +31,8 @@ local Node.js needed. Works anonymously at shared rate limits.
 claude plugin install context7@claude-plugins-official
 ```
 
-(Inside a session: `/plugin install context7@claude-plugins-official`.) The vendor also
-publishes its own marketplace: `/plugin marketplace add upstash/context7`, then
+(Inside a Claude Code session: `/plugin install context7@claude-plugins-official`.) The
+vendor also publishes its own marketplace: `/plugin marketplace add upstash/context7`, then
 `/plugin install context7@context7-marketplace`. After installing either plugin, restart
 Claude Code and run `/mcp`; for the vendor's plugin, select Context7 there and complete
 the browser sign-in it asks for.
@@ -67,6 +70,12 @@ claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp --api-key Y
 `--scope` accepts `user` (all projects on this machine), `project` (written to a
 shared `.mcp.json` in the repository), or `local` (this project, this user only).
 
+## Other agents
+
+Other MCP clients connect to the same remote server (`https://mcp.context7.com/mcp`) or run
+the same local package (`@upstash/context7-mcp`) through their own MCP configuration. The
+vendor's all-clients page linked above shows the format for each one.
+
 ## Keep keys out of the repository
 
 Never commit an API key. If you register the server at project scope, reference an
@@ -75,12 +84,12 @@ and have each developer export the variable in their shell profile.
 
 ## Verify it works
 
-1. `claude mcp list` (or `/mcp` in a session) shows the server as connected. Restart the
-   session if it was added while one was running. The server name depends on how it was
-   installed: `context7` when added with `claude mcp add`, `plugin:context7:context7` when
-   it comes from a plugin.
-2. The tool list now includes `resolve-library-id` and `query-docs` under the matching
-   prefix: `mcp__context7__resolve-library-id` for a server you added, or
+1. In Claude Code, `claude mcp list` (or `/mcp` in a session) shows the server as
+   connected. Restart the session if it was added while one was running. The server name
+   depends on how it was installed: `context7` when added with `claude mcp add`,
+   `plugin:context7:context7` when it comes from a plugin.
+2. The tool list now includes `resolve-library-id` and `query-docs` under the agent's
+   prefix. In Claude Code: `mcp__context7__resolve-library-id` for a server you added, or
    `mcp__plugin_context7_context7__resolve-library-id` for the plugin. Permission
    allowlists, hook matchers and `allowed-tools` lists must use the form actually present;
    a rule written for one form never matches the other.

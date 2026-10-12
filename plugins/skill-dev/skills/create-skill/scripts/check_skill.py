@@ -3,21 +3,34 @@
 
 Use it next to (never instead of) the repository's own validator and
 `claude plugin validate`. It catches the mistakes that make a skill fail to
-load, fail to route, or leak private context, before any paid test runs.
+load, fail to route, leak private context, or work in only one agent, before
+any paid test runs. Skills follow the open Agent Skills standard
+(agentskills.io), so the same folder loads in Claude Code and in other agents.
 
 Checks, per skill directory:
 
-  errors    frontmatter that will not parse; a missing or invalid `name`
-            (lowercase letters, digits and single hyphens, 1-64 chars, equal to
-            the directory name, no "anthropic" or "claude"); a missing or
-            over-long `description` (1-1024 chars); XML-like tags in name or
-            description; a markdown link in SKILL.md that points at a missing
-            file; a file under references/ that SKILL.md never mentions; a hit
-            for any --deny pattern
-  warnings  description over --max-desc chars (the shared listing budget);
-            description + when_to_use over 1,536 chars; SKILL.md at 500+ lines;
-            undocumented frontmatter keys; YAML that only lenient parsers
-            accept; skill-dir variables inside shell blocks of reference files
+  errors    frontmatter that will not parse; with --portable, a top-level
+            frontmatter field outside the Agent Skills standard (name,
+            description, license, compatibility, metadata, allowed-tools),
+            such as argument-hint or when_to_use; a missing or invalid `name` (lowercase letters,
+            digits and single hyphens, 1-64 chars, equal to the directory
+            name, no "anthropic" or "claude"); a missing or over-long
+            `description` (1-1024 chars); a `compatibility` over 500 chars;
+            XML-like tags in name or description; the dollar-sign ARGUMENTS
+            placeholder in SKILL.md or references/ (only Claude Code
+            substitutes it); the skill-dir variable used in the SKILL.md body,
+            references/ or scripts/ while SKILL.md lacks the sentence that
+            explains it to other agents; a markdown link in SKILL.md that
+            points at a missing file; a file under references/ that SKILL.md
+            never mentions; a hit for any --deny pattern
+  warnings  without --portable, a frontmatter field outside the standard
+            (Claude Code-only keys such as disable-model-invocation or paths
+            are fine in a skill that only ever runs in Claude Code); description
+            over --max-desc chars (the shared listing budget); description +
+            when_to_use over 1,536 chars; SKILL.md at 500+ lines;
+            YAML that only lenient parsers accept; the skill-dir variable used
+            before its explanation sentence, or the sentence repeated;
+            skill-dir variables inside shell blocks of reference files
             (only SKILL.md gets them substituted); unescaped $0-$9 in SKILL.md
             (replaced by arguments); bundled scripts SKILL.md never mentions;
             eval files that do not follow the canonical names; behavior evals
@@ -32,6 +45,7 @@ ROOT/plugins/*/skills/*/SKILL.md, because Claude Code drops descriptions
 Usage:
     python3 -I check_skill.py plugins/<plugin>/skills/<name> [more skill dirs]
     python3 -I check_skill.py <skill-dir> --deny 'acme|internal-tool-name'
+    python3 -I check_skill.py <skill-dir> --portable   # for a skill meant for any agent
     python3 -I check_skill.py --listing .
     python3 -I check_skill.py --selftest
 
@@ -54,15 +68,33 @@ MD_LINK_RE = re.compile(r"\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
 TICK_PATH_RE = re.compile(r"`((?:references|scripts|assets)/[^`\s]+)`")
 SKILL_VAR_RE = re.compile(r"\$\{CLAUDE_(?:SKILL_DIR|PLUGIN_ROOT|PLUGIN_DATA|PROJECT_DIR)\}")
 POSITIONAL_RE = re.compile(r"(?<!\\)\$[0-9]")
+# The all-caps arguments placeholder, written so this file never contains it.
+ARGS_PLACEHOLDER_RE = re.compile(r"[$]ARGUMENTS")
 SHELL_FENCES = {"bash", "sh", "shell", "zsh", "console", "terminal"}
 
-# Documented Claude Code skill frontmatter plus the Agent Skills spec keys.
-KNOWN_KEYS = {
-    "name", "description", "when_to_use", "argument-hint", "arguments",
-    "disable-model-invocation", "user-invocable", "allowed-tools",
-    "disallowed-tools", "model", "effort", "context", "agent", "background",
-    "hooks", "paths", "shell", "metadata", "license", "compatibility",
+# The top-level frontmatter fields of the open Agent Skills standard
+# (agentskills.io). Claude Code reads more (argument-hint, when_to_use,
+# disable-model-invocation, paths, ...), but other agents ignore or reject
+# them, so a portable skill uses only these.
+SPEC_KEYS = ("name", "description", "license", "compatibility", "metadata", "allowed-tools")
+# Documented Claude Code skill frontmatter outside the standard. Valid in a skill
+# that only ever runs in Claude Code (disable-model-invocation is a real safety
+# control there), so these warn unless --portable asks for the standard alone.
+CLAUDE_CODE_KEYS = {
+    "when_to_use", "argument-hint", "arguments", "disable-model-invocation",
+    "user-invocable", "disallowed-tools", "model", "effort", "context", "agent",
+    "background", "hooks", "paths", "shell",
 }
+MAX_COMPATIBILITY = 500
+
+# The sentence that explains the skill-dir variable to agents that do not
+# substitute it. Built in pieces so this file never contains the variable.
+SKILL_DIR_TOKEN = "${" + "CLAUDE_SKILL_DIR}"
+SKILL_DIR_SENTENCE = ("`" + SKILL_DIR_TOKEN + "` stands for this skill's folder, the directory that contains "
+                      "this SKILL.md. Claude Code fills it in; in other tools, use that folder's path.")
+SKILL_DIR_SENTENCE_RE = re.compile(
+    r"`?" + re.escape(SKILL_DIR_TOKEN) + r"`?\s+"
+    + r"\s+".join(re.escape(word) for word in SKILL_DIR_SENTENCE.split()[1:]))
 
 # Patterns are written so that this file does not match itself.
 PRIVATE_PATTERNS = [
@@ -237,7 +269,7 @@ def iter_files(root: str):
             yield os.path.join(dirpath, name)
 
 
-def check_frontmatter(skill_dir: str, text: str, report: Report) -> dict[str, object]:
+def check_frontmatter(skill_dir: str, text: str, report: Report, portable: bool = False) -> dict[str, object]:
     fm_lines, _ = split_frontmatter(text)
     if fm_lines is None:
         report.add("ERROR", "SKILL.md:1", "no frontmatter: the file must start with '---' and close it with '---'")
@@ -245,9 +277,22 @@ def check_frontmatter(skill_dir: str, text: str, report: Report) -> dict[str, ob
     data = parse_frontmatter(fm_lines, report)
     dir_name = os.path.basename(os.path.abspath(skill_dir))
 
+    level = "ERROR" if portable else "WARN"
+    scope = ("" if portable else
+             "; fine in a skill that only runs in Claude Code, and an error with --portable")
     for key in data:
-        if key not in KNOWN_KEYS:
-            report.add("WARN", "SKILL.md", f"'{key}' is not a documented frontmatter key; confirm the repo validator allows it")
+        if key in SPEC_KEYS:
+            continue
+        if key == "argument-hint":
+            report.add(level, "SKILL.md", "'argument-hint' is a Claude Code autocomplete hint, not an Agent Skills field; "
+                       f"other agents ignore it and skills-ref rejects it, so say in the body what the skill's arguments are{scope}")
+        elif key in CLAUDE_CODE_KEYS:
+            report.add(level, "SKILL.md", f"'{key}' is Claude Code-only, not an Agent Skills frontmatter field "
+                       f"(allowed: {', '.join(SPEC_KEYS)}); other agents ignore it and skills-ref rejects it, "
+                       f"so a portable skill carries its intent in the body{scope}")
+        else:
+            report.add(level, "SKILL.md", f"'{key}' is not an Agent Skills frontmatter field "
+                       f"(allowed: {', '.join(SPEC_KEYS)}) nor a documented Claude Code key; check the spelling{scope}")
 
     name = data.get("name")
     if not isinstance(name, str) or not name:
@@ -275,6 +320,9 @@ def check_frontmatter(skill_dir: str, text: str, report: Report) -> dict[str, ob
         tag = XML_TAG_RE.search(desc)
         if tag:
             report.add("ERROR", "SKILL.md", f"description contains an XML-like tag {tag.group(0)!r}; placeholders such as <plugin> count, so reword them")
+    compat = data.get("compatibility")
+    if isinstance(compat, str) and len(compat) > MAX_COMPATIBILITY:
+        report.add("ERROR", "SKILL.md", f"compatibility is {len(compat)} chars (limit {MAX_COMPATIBILITY})")
     when = data.get("when_to_use")
     combined = len(desc) + (len(when) if isinstance(when, str) else 0)
     if combined > 1536:
@@ -372,6 +420,52 @@ def check_markdown_bodies(skill_dir: str, skill_text: str, report: Report) -> No
         head = "\n".join(text.splitlines()[:40])
         if rel.startswith("references") and text.count("\n") > 300 and not re.search(r"(?im)^#*\s*(?:\*\*)?(?:contents|table of contents)\b", head):
             report.add("WARN", rel, "over 300 lines with no 'Contents' list near the top")
+
+
+def check_portability(skill_dir: str, skill_text: str, report: Report) -> None:
+    """Flag text that only Claude Code understands: the arguments placeholder,
+    and the skill-dir variable with no sentence explaining it to other agents."""
+    def files_under(sub: str) -> list[tuple[str, str]]:
+        base = os.path.join(skill_dir, sub)
+        found = []
+        if os.path.isdir(base):
+            for path in iter_files(base):
+                text = read_text(path)
+                if text is not None:
+                    found.append((os.path.relpath(path, skill_dir), text))
+        return found
+
+    references, scripts = files_under("references"), files_under("scripts")
+    for rel, text in [("SKILL.md", skill_text)] + references:
+        for number, line in enumerate(text.splitlines(), start=1):
+            if ARGS_PLACEHOLDER_RE.search(line):
+                report.add("ERROR", f"{rel}:{number}", "the dollar-sign ARGUMENTS placeholder is substituted only by Claude Code "
+                           "(other agents show it as literal text); refer to \"the skill's arguments\" instead, since Claude Code "
+                           "appends them after ARGUMENTS: when SKILL.md has no placeholder")
+
+    lines = skill_text.splitlines()
+    _, close = split_frontmatter(skill_text)
+    body_start = close + 2 if close else 1  # file line number of the first body line
+    body = "\n".join(lines[close + 1:] if close else lines)
+    users = (["SKILL.md"] if SKILL_DIR_TOKEN in body else []) + \
+        [rel for rel, text in references + scripts if SKILL_DIR_TOKEN in text]
+    if not users:
+        return
+    sentences = list(SKILL_DIR_SENTENCE_RE.finditer(body))
+    if not sentences:
+        shown = ", ".join(users[:3]) + (" ..." if len(users) > 3 else "")
+        report.add("ERROR", "SKILL.md", f"the skill-dir variable is used ({shown}) but SKILL.md never explains it to agents "
+                   f"that do not substitute it; add this sentence once, just before its first use in the body: {SKILL_DIR_SENTENCE}")
+        return
+    if len(sentences) > 1:
+        report.add("WARN", "SKILL.md", f"the skill-dir explanation sentence appears {len(sentences)} times; keep one, before the first use")
+    first = sentences[0]
+    index = body.find(SKILL_DIR_TOKEN)
+    while index != -1 and first.start() <= index < first.end():
+        index = body.find(SKILL_DIR_TOKEN, index + 1)
+    if index != -1 and index < first.start():
+        report.add("WARN", f"SKILL.md:{body_start + body.count(chr(10), 0, index)}",
+                   "the skill-dir variable is used before the sentence that explains it; move the sentence to just before this first use")
 
 
 def check_evals(skill_dir: str, report: Report) -> None:
@@ -481,19 +575,20 @@ def plugin_version_note(skill_dir: str, report: Report) -> None:
         report.add("INFO", "plugin", "plugin.json has no 'version'; report it instead of inventing one")
 
 
-def check_skill(skill_dir: str, deny: list[re.Pattern[str]], max_desc: int) -> Report:
+def check_skill(skill_dir: str, deny: list[re.Pattern[str]], max_desc: int, portable: bool = False) -> Report:
     report = Report(skill_dir)
     skill_md = os.path.join(skill_dir, "SKILL.md")
     text = read_text(skill_md) if os.path.isfile(skill_md) else None
     if text is None:
         report.add("ERROR", "SKILL.md", "missing or unreadable SKILL.md")
         return report
-    data = check_frontmatter(skill_dir, text, report)
+    data = check_frontmatter(skill_dir, text, report, portable)
     desc = data.get("description")
     if isinstance(desc, str) and max_desc < len(desc) <= 1024:
         report.add("WARN", "SKILL.md", f"description is {len(desc)} chars; above {max_desc} it eats the listing budget every installed skill shares")
     check_links(skill_dir, text, report)
     check_markdown_bodies(skill_dir, text, report)
+    check_portability(skill_dir, text, report)
     check_evals(skill_dir, report)
     check_hygiene(skill_dir, deny, report)
     plugin_version_note(skill_dir, report)
@@ -568,12 +663,12 @@ def selftest() -> int:
                     handle.write(content)
             return skill
 
-        def messages(skill: str, level: str, deny: tuple[str, ...] = ()) -> list[str]:
-            report = check_skill(skill, [re.compile(d, re.I) for d in deny], 500)
+        def messages(skill: str, level: str, deny: tuple[str, ...] = (), portable: bool = False) -> list[str]:
+            report = check_skill(skill, [re.compile(d, re.I) for d in deny], 500, portable)
             return [m for lvl, _, m in report.items if lvl == level]
 
-        def has(skill: str, level: str, needle: str, deny: tuple[str, ...] = ()) -> bool:
-            return any(needle in m for m in messages(skill, level, deny))
+        def has(skill: str, level: str, needle: str, deny: tuple[str, ...] = (), portable: bool = False) -> bool:
+            return any(needle in m for m in messages(skill, level, deny, portable))
 
         clean = make_skill('name: demo-skill\ndescription: "Does a thing. Use when X. Not for Y."\n')
         expect("a clean skill has no errors", messages(clean, "ERROR") == [])
@@ -603,9 +698,46 @@ def selftest() -> int:
                has(make_skill("name: demo-skill\nname: demo-skill\ndescription: d\n"), "ERROR", "duplicate key"))
 
         data = parse_frontmatter(
-            ["name: a", "description: >", "  first line", "  second line", "argument-hint: '[x]'"], Report("x"))
+            ["name: a", "description: >", "  first line", "  second line", "compatibility: '[x]'"], Report("x"))
         expect("a folded description joins its lines", data.get("description") == "first line second line")
-        expect("a single-quoted value is unquoted", data.get("argument-hint") == "[x]")
+        expect("a single-quoted value is unquoted", data.get("compatibility") == "[x]")
+
+        spec_only = make_skill('name: demo-skill\ndescription: "Does a thing."\nlicense: MIT\n'
+                               'compatibility: Needs Python 3.8 or later.\nmetadata:\n  author: example\n'
+                               'allowed-tools: Bash(git diff:*), Read\n')
+        expect("every Agent Skills field is accepted, even with --portable",
+               messages(spec_only, "ERROR", portable=True) == []
+               and not has(spec_only, "WARN", "frontmatter field", portable=True))
+        hinted = make_skill("name: demo-skill\ndescription: d\nargument-hint: \"[target]\"\n")
+        expect("argument-hint warns by default",
+               has(hinted, "WARN", "'argument-hint' is a Claude Code autocomplete hint")
+               and not has(hinted, "ERROR", "argument-hint"))
+        expect("argument-hint is an error with --portable",
+               has(hinted, "ERROR", "'argument-hint' is a Claude Code autocomplete hint", portable=True))
+        for key, value in (("when_to_use", "Use when X."), ("disable-model-invocation", "true"), ("paths", "\"*.sql\"")):
+            keyed = make_skill(f"name: demo-skill\ndescription: d\n{key}: {value}\n")
+            expect(f"the Claude Code-only field {key} warns by default",
+                   has(keyed, "WARN", f"'{key}' is Claude Code-only") and messages(keyed, "ERROR") == [])
+            expect(f"the Claude Code-only field {key} is an error with --portable",
+                   has(keyed, "ERROR", f"'{key}' is Claude Code-only", portable=True))
+        typo = make_skill("name: demo-skill\ndescription: d\nlicence: MIT\n")
+        expect("an unknown field warns by default and is an error with --portable",
+               has(typo, "WARN", "check the spelling") and has(typo, "ERROR", "check the spelling", portable=True))
+        expect("a compatibility over 500 chars is an error",
+               has(make_skill("name: demo-skill\ndescription: d\ncompatibility: " + "z" * 501 + "\n"), "ERROR",
+                   "compatibility is 501 chars"))
+
+        args = "$" + "ARGUMENTS"  # built at runtime so this file never contains the placeholder
+        expect("the arguments placeholder in SKILL.md is an error",
+               has(make_skill("name: demo-skill\ndescription: d\n", body=f"Target: {args}.\n"), "ERROR",
+                   "ARGUMENTS placeholder"))
+        expect("the arguments placeholder in a reference is an error",
+               has(make_skill("name: demo-skill\ndescription: d\n", body="[r](references/r.md)\n",
+                              files={"references/r.md": f"Use {args}[0] here.\n"}), "ERROR", "ARGUMENTS placeholder"))
+        expect("portable argument wording is not an error",
+               not has(make_skill("name: demo-skill\ndescription: d\n",
+                                  body="Target: the skill's arguments (they appear after ARGUMENTS: in Claude Code).\n"),
+                       "ERROR", "ARGUMENTS placeholder"))
 
         linked = make_skill("name: demo-skill\ndescription: d\n",
                             body="See [guide](references/guide.md) and [gone](references/gone.md).\n",
@@ -624,6 +756,28 @@ def selftest() -> int:
             files={"references/r.md": f"{var} below is not a shell variable: use this skill's folder.\n\n```bash\npython3 {var}/scripts/x.py\n```\n"})
         expect("a reference that explains the skill-dir variable does not warn",
                not any("substituted only in SKILL.md" in m for m in messages(noted_ref, "WARN")))
+        expect("a skill-dir variable in a reference needs the sentence in SKILL.md",
+               has(noted_ref, "ERROR", "never explains it"))
+
+        sentence = SKILL_DIR_SENTENCE
+        wrapped = sentence.replace(" the directory", "\nthe directory")
+        unexplained = make_skill("name: demo-skill\ndescription: d\n", body=f"Run `python3 {var}/scripts/x.py`.\n")
+        expect("a skill-dir variable in the body without the sentence is an error",
+               has(unexplained, "ERROR", "never explains it"))
+        explained = make_skill("name: demo-skill\ndescription: d\n",
+                               body=f"{wrapped}\n\nRun `python3 {var}/scripts/x.py`.\n")
+        expect("the sentence, even wrapped across lines, satisfies the check",
+               not has(explained, "ERROR", "never explains it") and not has(explained, "WARN", "skill-dir"))
+        late = make_skill("name: demo-skill\ndescription: d\n",
+                          body=f"Run `python3 {var}/scripts/x.py`.\n\n{sentence}\n")
+        expect("a sentence after the first use warns", has(late, "WARN", "used before the sentence"))
+        twice = make_skill("name: demo-skill\ndescription: d\n", body=f"{sentence}\n\n{sentence}\n")
+        expect("a repeated sentence warns", has(twice, "WARN", "appears 2 times"))
+        tools_only = make_skill(f"name: demo-skill\ndescription: d\nallowed-tools: Bash(python3 {var}/scripts/x.py:*)\n")
+        expect("a skill-dir variable only in allowed-tools needs no sentence", not has(tools_only, "ERROR", "never explains it"))
+        in_script = make_skill("name: demo-skill\ndescription: d\n", body="Run `scripts/x.sh`.\n",
+                               files={"scripts/x.sh": f"#!/bin/sh\n# usage: sh {var}/scripts/x.sh\n"})
+        expect("a skill-dir variable in a script needs the sentence in SKILL.md", has(in_script, "ERROR", "never explains it"))
         code_link = make_skill("name: demo-skill\ndescription: d\n",
                                body="Link it as `Supersedes [ADR-NNNN](NNNN-old.md)`.\n\n```md\n[x](missing.md)\n```\n")
         expect("example links inside code are not checked", not has(code_link, "ERROR", "link target does not exist"))
@@ -667,6 +821,9 @@ def main() -> int:
     parser.add_argument("--max-desc", type=int, default=500,
                         help="warn when a description is longer than this (default 500)")
     parser.add_argument("--listing", metavar="ROOT", help="total the descriptions of ROOT/plugins/*/skills/*")
+    parser.add_argument("--portable", action="store_true",
+                        help="fail on frontmatter fields outside the Agent Skills standard (use for a skill meant for any "
+                             "agent, such as every skill in a shared marketplace); without it they only warn")
     parser.add_argument("--quiet", action="store_true", help="hide INFO lines")
     parser.add_argument("--selftest", action="store_true", help="run the built-in checks of these rules and exit")
     args = parser.parse_args()
@@ -687,7 +844,7 @@ def main() -> int:
         if not os.path.isdir(skill_dir):
             print(f"not a directory: {skill_dir}", file=sys.stderr)
             return 2
-        report = check_skill(skill_dir, deny, args.max_desc)
+        report = check_skill(skill_dir, deny, args.max_desc, args.portable)
         print(f"check_skill: {skill_dir}")
         order = {"ERROR": 0, "WARN": 1, "INFO": 2}
         for level, where, message in sorted(report.items, key=lambda item: order[item[0]]):

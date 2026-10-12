@@ -160,6 +160,7 @@ query | accessibility> problems." For `review-suite:parallel-review`, give it
 the same range, criteria, non-goals, and constraints; it writes its own
 persona briefs.
 
-If no subagent tool exists, do the review yourself with the same method,
-report Phase 7 as "self-review only" in the final report, and list "review by
-a human" as a follow-up.
+If no subagent tool exists, do the review yourself with the same method (one
+lens after another for a parallel or specialist pass), report Phase 7 as
+"self-review only" in the final report, noting that independence is reduced,
+and list "review by a human" as a follow-up.

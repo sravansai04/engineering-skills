@@ -1,7 +1,6 @@
 ---
 name: debug-root-cause
 description: "Finds the proven root cause of a bug, crash, wrong output, flaky test, race, hang, environment-only failure, slowdown, or memory leak, then fixes it with a regression test that fails first. Use for \"debug this\", \"why is this failing\", \"works locally but fails in prod\", \"which commit broke this\", or a pasted stack trace. Not for a red CI run (ci-failure-triage first), flaky e2e specs (browser-testing), a known-cause fix (tdd), one slow query (query-review), or postmortems (incident-postmortem)."
-argument-hint: "[error, stack trace, failing test, or symptom]"
 compatibility: The bundled scripts need bash and POSIX tools (Git Bash or WSL on Windows); bisecting needs git.
 ---
 
@@ -14,7 +13,9 @@ debugging time goes into editing code on a guess. Each guess that seems to work
 hides the real cause a little deeper. This workflow puts reproduction and evidence
 first, so the eventual fix is small, correct, and provable.
 
-The symptom is `$ARGUMENTS`; if that is empty, take it from the conversation.
+The symptom is the skill's arguments
+(in Claude Code, typed arguments appear after ARGUMENTS: at the end of this skill);
+if none were given, take it from the conversation.
 
 Scale the ceremony to the bug. An obvious cause with a clear stack trace can go
 through every step in minutes. Don't skip the failing test, the proof, or the
@@ -59,8 +60,9 @@ verification, even then.
   makes the bug disappear. Halve the input and keep whichever half still fails.
   Stub out components that don't matter. A minimal repro often reveals the cause on
   its own, and it makes the regression test easy to write.
-- **Measure the rate** for intermittent bugs:
-  `"${CLAUDE_SKILL_DIR}/scripts/repeat-run.sh" -n 50 -- CMD`. A failure in 1 of 3
+- **Measure the rate** for intermittent bugs with the bundled script.
+  `${CLAUDE_SKILL_DIR}` stands for this skill's folder, the directory that contains this SKILL.md. Claude Code fills it in; in other tools, use that folder's path.
+  Run `"${CLAUDE_SKILL_DIR}/scripts/repeat-run.sh" -n 50 -- CMD`. A failure in 1 of 3
   runs calls for a different strategy than 1 in 500. The rate also determines how
   many passes later count as proof. If a run can hang, add `-t SECS` so a stuck run
   is killed and counted instead of blocking the loop, and `-d CMD` to take a thread
@@ -351,15 +353,15 @@ back.
 - `workflow:incident-postmortem` for the write-up after a production incident.
 - `implementation:verify-before-done` for the final completion check.
 
-If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
+Skills are named here as `plugin:skill`; an agent that lists skills by bare name knows each one by the part after the colon (`review-suite:pr-review` is `pr-review`). If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
 
 ## Reference files
 
 The references are listed under "Specialized tracks" above. The two scripts both
 live in `${CLAUDE_SKILL_DIR}/scripts/`, run with bash on Linux and macOS,
-print full usage with `-h` or `--help`, and check themselves with `--selftest`. The references write their paths as
-`${CLAUDE_SKILL_DIR}/scripts/...`, which is not a shell variable: substitute the
-directory above, and quote the path.
+print full usage with `-h` or `--help`, and check themselves with `--selftest`. The references write their paths
+with the same skill-folder variable, which is not a shell variable there:
+substitute the directory above, and quote the path.
 
 - `repeat-run.sh [-n RUNS] [-u] [-k] [-o DIR] [-t SECS [-d CMD]] -- CMD...` runs a
   command repeatedly, keeps failing runs' logs, and reports the failure rate, its

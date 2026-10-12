@@ -15,7 +15,7 @@ Read this at step 1 of SKILL.md. It has the exact commands for turning a target 
 
 ## 1. Two rules that apply to every command here
 
-- **Shell variables do not survive between commands.** Each Bash call starts a fresh shell, so `BASE=$(...)` in one call is empty in the next. Run each command on its own, read the SHA it prints, and paste that literal value into later commands and briefs. The placeholders below (`BASE_SHA`, `HEAD_SHA`, `PR_NUMBER`, `BASEREF`) are text for you to replace, not variables. A multi-step recipe that genuinely needs a variable is written as one command line so it runs in a single call.
+- **Shell variables do not survive between commands.** In Claude Code each Bash call starts a fresh shell, so `BASE=$(...)` in one call is empty in the next; assume the same in any agent unless you know its shell persists. Run each command on its own, read the SHA it prints, and paste that literal value into later commands and briefs. The placeholders below (`BASE_SHA`, `HEAD_SHA`, `PR_NUMBER`, `BASEREF`) are text for you to replace, not variables. A multi-step recipe that genuinely needs a variable is written as one command line so it runs in a single call.
 - **Use the remote that points at the base repository.** That is usually `origin`; in a fork-based setup it is often `upstream`. Substitute it wherever `origin` appears.
 
 ## 2. Find the default branch

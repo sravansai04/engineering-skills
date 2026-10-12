@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Measure how often a skill auto-triggers for a set of prompts.
+"""Measure how often a skill auto-triggers in Claude Code for a set of prompts.
 
 Runs each prompt through a fresh, non-interactive Claude Code session
 (`claude -p ... --output-format stream-json --verbose`) with the plugins under
@@ -53,8 +53,10 @@ Exit codes: 0 every case passed and no run errored (or the self-test passed);
 missing, bad cases file, skill not loaded); 3 no case failed but at least one
 run errored (rerun before trusting it).
 
-Standard library only. Requires the `claude` CLI on PATH (or --claude-bin),
-except for --selftest and --dry-run.
+Standard library only. This is a Claude Code testing tool: it requires the
+Claude Code `claude` CLI on PATH (or --claude-bin), except for --selftest and
+--dry-run, and it measures routing in Claude Code only. To check another agent,
+run the same prompts in that agent's fresh sessions and record them by hand.
 """
 
 from __future__ import annotations

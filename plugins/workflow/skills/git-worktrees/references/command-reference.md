@@ -5,6 +5,10 @@ Checked against the `git-worktree`, `git-config`, and `git-rev-parse` manuals
 machine, run `git worktree <subcommand> -h`; it lists exactly what that build
 supports.
 
+`${CLAUDE_SKILL_DIR}` in the commands below is not a shell variable: replace it
+with this skill's directory, the folder that contains SKILL.md (in Claude Code,
+the path SKILL.md shows for `scripts/`), and keep the quotes.
+
 ## Contents
 
 1. Minimum versions

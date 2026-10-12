@@ -2,7 +2,8 @@
 # Dependabot moves both the pinned commit SHA and the "# vX.Y.Z" comment beside it.
 #
 # It cannot see the tool versions pinned inside the workflows' `env:` blocks (actionlint and
-# its checksum, the Claude Code CLI, Playwright); bump those by hand.
+# its checksum, the Claude Code CLI, Playwright, skills-ref with its checksum and its pinned
+# dependencies click, strictyaml, python-dateutil and six); bump those by hand.
 version: 2
 updates:
   - package-ecosystem: github-actions

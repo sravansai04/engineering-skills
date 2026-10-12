@@ -8,7 +8,6 @@ description: >-
   worktrees", or an "already used by worktree" error. Not for executing a plan
   (execute-plan), reviewing a PR (pr-review), or answering review comments
   (respond-to-review).
-argument-hint: "[branch or task to isolate | worktree path to clean up]"
 allowed-tools: Bash(git worktree list:*), Bash(git status:*), Bash(git rev-parse:*), Bash(git branch --list:*), Bash(git branch --show-current), Bash(git check-ignore:*), Bash(git for-each-ref:*), Bash(git log:*), Bash(git ls-files:*), Bash(git fetch:*), Read, Grep, Glob
 compatibility: The bundled scripts need bash and git 2.31 or later (2.38 or later for content-based landing checks); on Windows use Git Bash or WSL.
 ---
@@ -30,11 +29,15 @@ split:
 - A branch can be checked out in only one worktree at a time.
 - Removing a worktree deletes its files and its private state, but not its branch.
 
-Request: $ARGUMENTS. If it is empty, take the branch, task, or worktree path
-from the conversation; ask only when the conversation names none.
+Request: the skill's arguments
+(in Claude Code, typed arguments appear after ARGUMENTS: at the end of this skill).
+If none were given, take the branch, task, or worktree path from the
+conversation; ask only when the conversation names none.
 
 Three bundled bash scripts (git 2.31 or newer) automate the checks below; each
-is described under "Reference files". Call them as
+is described under "Reference files".
+`${CLAUDE_SKILL_DIR}` stands for this skill's folder, the directory that contains this SKILL.md. Claude Code fills it in; in other tools, use that folder's path.
+Call them as
 `"${CLAUDE_SKILL_DIR}/scripts/<name>"`, quoted. A bare `scripts/wt-preflight.sh`
 resolves against the user's repository, where it fails or, worse, runs the
 project's own script of that name. They act on the repository containing the
@@ -346,6 +349,12 @@ agents from overwriting each other's files; they do not prevent conflicting
 changes from meeting at merge time, so partition the work by file or module
 ownership before you start.
 
+Dispatching the agents needs an agent that can run subagents, such as Claude
+Code's Agent tool or OpenCode's subagents, or separate sessions the user starts
+in each worktree. Without either, work through the same briefs one after another
+in the current session, each in its own worktree, and say in the report that the
+tasks ran sequentially.
+
 The coordinator, not the agents, creates and removes worktrees:
 
 1. Pin one base commit that contains everything the agents depend on:
@@ -422,8 +431,10 @@ not create.
 - `workflow:commit-message` and `workflow:pr-description` write the commit and
   PR text.
 
-If a skill named here isn't installed, give the short version inline and list
-the deeper pass as a follow-up.
+Skills are named here as `plugin:skill`; an agent that lists skills by bare
+name knows each one by the part after the colon (`review-suite:pr-review` is
+`pr-review`). If a skill named here isn't installed, give the short version
+inline and list the deeper pass as a follow-up.
 
 ## Reference files
 
@@ -444,9 +455,9 @@ the deeper pass as a follow-up.
   repositories, container mount problems, and the common-mistakes table. Read when
   a worktree command fails or a worktree behaves strangely (step 8).
 
-The reference files write script paths as `${CLAUDE_SKILL_DIR}/scripts/...` too.
-That is expanded only in this file, so there substitute the absolute path it
-expanded to above, and quote it.
+The reference files write script paths with the same skill-folder variable,
+which Claude Code fills in only in this file; there, substitute this skill's
+folder path (as shown in the commands above), and quote it.
 
 - `scripts/wt-create.sh [options] <path> <branch> [<base>]`: the step 3 checks
   plus fetch, `--no-track`, and submodule init. Refuses a tag, remote-tracking

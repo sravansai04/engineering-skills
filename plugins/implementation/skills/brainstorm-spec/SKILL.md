@@ -1,7 +1,6 @@
 ---
 name: brainstorm-spec
 description: "Turns a rough idea into a spec the user approves before any plan or code, via one multiple-choice question at a time, scope cuts, and 2-3 compared approaches. Use for \"I'm thinking about adding...\", \"help me figure out what to build\", \"let's brainstorm this feature\", \"spec this out\", or an idea too vague to plan. Not for settled requirements (plan-feature), building a defined feature (build-feature), bugs (debug-root-cause), or recording one decision (adr-writer)."
-argument-hint: "[rough idea, problem statement, or issue link]"
 allowed-tools: Bash(git log:*), Bash(git ls-files:*), Bash(git grep:*), Bash(gh issue list:*), Bash(gh issue view:*), Bash(date +%F), Bash(python3 -I ${CLAUDE_SKILL_DIR}/scripts/spec_lint.py:*), Bash(python3 -I "${CLAUDE_SKILL_DIR}/scripts/spec_lint.py":*), Read, Grep, Glob
 compatibility: The bundled spec linter needs Python 3.8 or later (standard library only).
 ---
@@ -23,10 +22,11 @@ Two exits are sanctioned: the fast path (under Special cases), when the user
 explicitly wants to skip ahead, and a throwaway spike outside the repo, with
 the user's OK, when an unknown technical fact decides the approach (step 4).
 
-Idea to explore: $ARGUMENTS
+Idea to explore: the skill's arguments
+(in Claude Code, typed arguments appear after ARGUMENTS: at the end of this skill).
 
-If `$ARGUMENTS` is empty (as it is when this skill loads on its own), take the
-idea from the conversation.
+If none were given (as when this skill loads on its own), take the idea from
+the conversation.
 
 ## Before you start: is the *what* still open?
 
@@ -143,9 +143,10 @@ What should happen when someone starts an export identical to one already runnin
   D. Something else, or "your call"
 ```
 
-With a structured choice tool such as `AskUserQuestion`, the escape option and
-the recommendation are expressed differently; follow the tool-mode rules in
-`references/question-bank.md` section 1.
+Ask with a structured-question tool if your agent has one (AskUserQuestion in
+Claude Code), otherwise ask in chat in the format above. In tool mode the escape
+option and the recommendation are expressed differently; follow the tool-mode
+rules in `references/question-bank.md` section 1.
 
 Keep a **ledger** and show it after every three or four answers, and always
 before step 3:
@@ -269,17 +270,16 @@ conventions (`workflow:commit-message` covers that).
 
 ### 7. Self-review before asking for approval
 
-Run the bundled linter on the file (standard library only, Python 3.8+):
+Run the bundled linter on the file (standard library only, Python 3.8+).
+`${CLAUDE_SKILL_DIR}` stands for this skill's folder, the directory that contains this SKILL.md. Claude Code fills it in; in other tools, use that folder's path.
 
 ```bash
 python3 -I "${CLAUDE_SKILL_DIR}/scripts/spec_lint.py" docs/specs/2026-03-14-export-notify.md
 ```
 
-Claude Code substitutes `${CLAUDE_SKILL_DIR}` with this skill's directory in
-this file only; in other hosts, use the absolute path to the directory that
-holds this SKILL.md. Exit 0 means no errors, 1 means errors (or warnings under
-`--strict`), 2 means the file could not be read. What each check means, and
-the flags, are in `references/self-review.md`.
+Exit 0 means no errors, 1 means errors (or warnings under `--strict`), 2 means
+the file could not be read. What each check means, and the flags, are in
+`references/self-review.md`.
 
 Then do the reading passes the linter cannot: traceability in every direction
 (problem to SC to R to acceptance check, and design back to R), contradictions,
@@ -428,7 +428,7 @@ step 5; the hand-off message in step 8; the self-review report in
   to explain.
 - `workflow:commit-message`: if the user asks you to commit the spec.
 
-If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
+Skills are named here as `plugin:skill`; an agent that lists skills by bare name knows each one by the part after the colon (`review-suite:pr-review` is `pr-review`). If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
 
 ## Reference files
 

@@ -9,7 +9,7 @@
     {
       "name": "implementation",
       "description": "Turn a rough idea into an approved spec, plan a feature, build it end to end or execute a written plan, develop test-first, debug failures to a proven root cause, refactor or simplify without changing behavior, check APIs against the docs for the versions you pin, and verify a change is really finished before calling it done.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "author": {
         "name": "Sravan Sai Rahul Nalla"
       },
@@ -19,7 +19,7 @@
     {
       "name": "review-suite",
       "description": "Review code like a senior engineer: pull request review with verified, severity-rated findings, security review that traces untrusted input to dangerous sinks, performance and scalability review, and a parallel review by several reviewer subagents for large or risky changes.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "author": {
         "name": "Sravan Sai Rahul Nalla"
       },
@@ -29,7 +29,7 @@
     {
       "name": "data-api",
       "description": "Design and review HTTP, GraphQL and gRPC API contracts, write database migrations that are safe under rolling deploys, and review SQL queries, query plans and ORM call sites for correctness, speed and concurrency safety.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "author": {
         "name": "Sravan Sai Rahul Nalla"
       },
@@ -39,7 +39,7 @@
     {
       "name": "workflow",
       "description": "Team workflow around the code: atomic commits with clear messages, pull request descriptions written from the real diff, working through review comments on your own PR, isolated git worktrees for parallel branches and agents, CI failure triage, architecture decision records, and blameless incident postmortems.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "author": {
         "name": "Sravan Sai Rahul Nalla"
       },
@@ -49,7 +49,7 @@
     {
       "name": "frontend",
       "description": "Shape and check user interfaces: decide a visual direction and encode it as design tokens, verify UI changes in a real browser and write or de-flake end-to-end tests, and review web UI accessibility against WCAG 2.2 AA.",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "author": {
         "name": "Sravan Sai Rahul Nalla"
       },
@@ -58,8 +58,8 @@
     },
     {
       "name": "skill-dev",
-      "description": "Author, test and maintain Claude Code skills: turn a repeated workflow into a skill, fix one that never triggers or fires on everything, and measure triggering and output in fresh sessions against a no-skill baseline before it ships.",
-      "version": "1.0.0",
+      "description": "Author, test and maintain agent skills (SKILL.md): turn a repeated workflow into a skill, fix one that never triggers or fires on everything, and measure triggering and output in fresh sessions against a no-skill baseline before it ships.",
+      "version": "1.1.0",
       "author": {
         "name": "Sravan Sai Rahul Nalla"
       },

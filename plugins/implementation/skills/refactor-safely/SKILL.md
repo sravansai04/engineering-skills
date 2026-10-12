@@ -1,7 +1,6 @@
 ---
 name: refactor-safely
 description: "Restructures code without changing behavior: pins behavior with tests, finds every usage including string and reflective ones, moves in small verified steps, and runs dependency and framework upgrades the same way. Use for \"refactor this\", \"split this class\", \"rename this everywhere\", \"delete dead code\", \"upgrade X to vN\". Not for trimming just-written code (simplify-code), new behavior or bug fixes (tdd, debug-root-cause), speed (performance-review), or renaming a column (db-migration-safety)."
-argument-hint: "[file, symbol, or area to refactor, and the goal]"
 ---
 
 # Refactor Safely
@@ -10,7 +9,7 @@ Refactoring changes the structure of code while keeping its observable behavior 
 
 "Observable behavior" means more than return values. It includes side effects (writes, messages, files, network calls), the errors raised, and anything another party depends on: wire formats, persisted data, public signatures, log lines that alerts match on, metric names. Private helper names, file layout and internal call structure are what you are free to change.
 
-If `$ARGUMENTS` or the user's request names a target and a goal, start there. Ask what to refactor and why only when neither does.
+If the skill's arguments (in Claude Code, typed arguments appear after ARGUMENTS: at the end of this skill) or the user's request name a target and a goal, start there. Ask what to refactor and why only when neither does.
 
 ## Workflow
 
@@ -192,7 +191,7 @@ The anti-example is a single commit, "refactor processOrder + gift cards", that 
 - `review-suite:performance-review` when the goal is speed rather than structure.
 - `data-api:db-migration-safety` and `data-api:api-design` for persisted names and wire contracts (step 7).
 
-If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
+Skills are named here as `plugin:skill`; an agent that lists skills by bare name knows each one by the part after the colon (`review-suite:pr-review` is `pr-review`). If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
 
 ## Reference files
 

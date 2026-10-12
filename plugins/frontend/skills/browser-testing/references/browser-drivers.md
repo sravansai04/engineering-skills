@@ -16,12 +16,12 @@ Read this in Mode A when choosing how to drive the browser, when no browser MCP 
 
 - Scan your available tools for browser verbs: navigate, snapshot, click, screenshot, console, network. Playwright MCP tools are named `browser_*`; Chrome DevTools MCP uses names such as `navigate_page`, `take_snapshot`, `list_console_messages`. Clients usually prefix them with the server name, e.g. `mcp__playwright__browser_snapshot`.
 - If the client lists MCP tools without schemas (a "deferred" or "load on demand" list), load the browser tools first. Their absence from the initial schema list does not mean they are unavailable.
-- In Claude Code the user can run `claude mcp list` to see configured servers and whether each one connects. A server that is configured but failing to connect is a setup problem to report, not a reason to silently switch tools.
+- In Claude Code the user can run `claude mcp list` to see configured servers and whether each one connects; other clients show the same in their MCP settings or status view. A server that is configured but failing to connect is a setup problem to report, not a reason to silently switch tools.
 - More than one browser server? Prefer the one with an isolated or temporary profile for verification. A server attached to a personal browser profile carries that person's cookies and sessions.
 
 ## 2. Optional one-line setup (ask first)
 
-Only offer these; installing or changing a user's client configuration needs their consent.
+Only offer these; installing or changing a user's client configuration needs their consent. The `claude mcp add` commands are the Claude Code form; other MCP clients take the same server command in their own configuration, usually as JSON (example below).
 
 **Playwright MCP** (official, from the Playwright team):
 
@@ -73,7 +73,7 @@ claude mcp add chrome-devtools --scope user npx chrome-devtools-mcp@latest
 
 Useful flags: `--headless` (headed is the default), `--isolated` (temporary profile, deleted when the browser closes), `--viewport 1280x720`, `--browser-url http://127.0.0.1:9222` (attach to a Chrome you started with remote debugging), `--no-usage-statistics`. Avoid `--slim` for verification: it leaves only navigation, script execution, and screenshots, with no snapshot, console, or network tools. Its `emulate` tool sets a device viewport (`375x667x2,mobile,touch`), color scheme, network throttling or offline, and CPU throttling at runtime; it has no request mocking. The server exposes everything in the attached browser to the client, so do not point it at a profile holding personal accounts.
 
-After adding either server, start a new session and confirm with `claude mcp list` (or `/mcp` inside a session).
+After adding either server, start a new session and confirm it connects: in Claude Code with `claude mcp list` (or `/mcp` inside a session), elsewhere with the client's own MCP status view or tool list.
 
 ## 3. Using an MCP driver well
 
@@ -99,7 +99,7 @@ npx playwright install chromium      # or skip and pass --channel chrome to use 
 
 If the project already has Playwright, you can reuse its install instead - but run rung 2 from the scratch directory either way, because it writes files into the current directory.
 
-**Rung 1 - multi-width health check.** The bundled script resolves Playwright from the current directory. `${CLAUDE_SKILL_DIR}` below is not a shell variable: replace it with this skill's directory, the path SKILL.md shows for `scripts/page-smoke.mjs`.
+**Rung 1 - multi-width health check.** The bundled script resolves Playwright from the current directory. `${CLAUDE_SKILL_DIR}` below is not a shell variable: replace it with this skill's directory, the folder that contains SKILL.md (in Claude Code, the path SKILL.md shows for `scripts/page-smoke.mjs`).
 
 ```bash
 node "${CLAUDE_SKILL_DIR}/scripts/page-smoke.mjs" http://localhost:3000/settings \

@@ -10,13 +10,14 @@ Principles behind every template:
   skim; the ask must not be buried in the middle.
 - Attach a recommendation to every choice so "yes" is a complete reply.
 - Show evidence as `file:line`, not adjectives.
-- One message per checkpoint. Do not split questions across turns. A
-  multiple-choice tool such as `AskUserQuestion` holds at most four questions
-  (two to four options each, recommended option first, "Other" added for
-  you) and is unavailable inside subagents. With more than four, use one
-  numbered plain-text message, or put the four with the largest blast radius
-  in the tool and state defaults for the rest in the brief so "defaults are
-  fine" covers them.
+- One message per checkpoint. Do not split questions across turns. Use a
+  structured-question tool if your agent has one (AskUserQuestion in Claude
+  Code), otherwise a plain-text message in chat. AskUserQuestion holds at
+  most four questions (two to four options each, recommended option first,
+  "Other" added for you) and is unavailable inside subagents. With more than
+  four, use one numbered plain-text message, or put the four with the largest
+  blast radius in the tool and state defaults for the rest in the brief so
+  "defaults are fine" covers them.
 
 ---
 

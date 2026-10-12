@@ -3,6 +3,10 @@
 A new worktree is a checkout of tracked files and nothing else. This file covers
 how to make it runnable without coupling it to other worktrees.
 
+`${CLAUDE_SKILL_DIR}` in the commands below is not a shell variable: replace it
+with this skill's directory, the folder that contains SKILL.md (in Claude Code,
+the path SKILL.md shows for `scripts/`), and keep the quotes.
+
 ## Contents
 
 1. What a new worktree lacks

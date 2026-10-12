@@ -7,10 +7,13 @@
 #                    shell scripts with /bin/bash 3.2, the bash most Macs still ship). A bundled
 #                    script without a --selftest fails the job.
 #   plugin-validate  `claude plugin validate --strict` on the marketplace and on each plugin.
+#   skills-ref       the Agent Skills reference validator on every skill, so each one also
+#                    loads in the other agents that follow the open standard.
 #   actionlint       lints the workflow files themselves.
 #
 # Versions that Dependabot cannot see live in the `env:` blocks below (actionlint, the
-# Claude Code CLI, Playwright). Bump them by hand and update the checksum next to each one.
+# Claude Code CLI, Playwright, skills-ref and its dependencies). Bump them by hand and
+# update the checksum next to each one.
 
 name: Validate
 
@@ -264,6 +267,72 @@ jobs:
             echo "Failed:$failed"
             exit 1
           fi
+
+  # The reference validator of the Agent Skills standard (agentskills.io): the frontmatter
+  # fields the standard allows, its name rules and its length limits. Release 0.1.1 installs
+  # its command as `agentskills`; there is no `skills-ref` executable.
+  skills-ref:
+    name: Agent Skills spec (skills-ref)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      # Pinned so a new release cannot turn an unrelated pull request red. Bump it on
+      # purpose: https://pypi.org/project/skills-ref/
+      SKILLS_REF_VERSION: "0.1.1"
+      # SHA-256 of skills_ref-<version>-py3-none-any.whl, from the release's PyPI file list.
+      SKILLS_REF_SHA256: "d35db5bb8de71ae301daf5ca9cb71f8a555e8c6f83a6d40e46a5bc09f8f461b5"
+      # Its dependencies, pinned for the same reason; bump them together with it.
+      CLICK_VERSION: "8.5.0"
+      STRICTYAML_VERSION: "1.7.3"
+      DATEUTIL_VERSION: "2.9.0.post0"
+      SIX_VERSION: "1.17.0"
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # skills-ref needs Python 3.11 or later.
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      # The pinned wheel is checked against a known checksum before it is installed. Its
+      # dependencies are pinned too (the wheel itself asks only for click>=8.0 and
+      # strictyaml>=1.7.3), so a new strictyaml cannot change how frontmatter parses.
+      - name: Install skills-ref
+        run: |
+          set -euo pipefail
+          dest="$RUNNER_TEMP/skills-ref"
+          wheel="skills_ref-${SKILLS_REF_VERSION}-py3-none-any.whl"
+          python -m pip download --disable-pip-version-check --no-deps --only-binary=:all: \
+            --dest "$dest" "skills-ref==${SKILLS_REF_VERSION}"
+          echo "${SKILLS_REF_SHA256}  $dest/$wheel" | sha256sum --check --strict
+          python -m pip install --disable-pip-version-check "$dest/$wheel" \
+            "click==${CLICK_VERSION}" "strictyaml==${STRICTYAML_VERSION}" \
+            "python-dateutil==${DATEUTIL_VERSION}" "six==${SIX_VERSION}"
+          python -m pip show skills-ref
+          command -v agentskills
+
+      - name: Validate every skill
+        shell: bash
+        run: |
+          set -uo pipefail
+          total=0
+          failed=""
+          for dir in plugins/*/skills/*/; do
+            total=$((total + 1))
+            if ! agentskills validate "$dir"; then
+              echo "::error file=${dir}SKILL.md::skills-ref validate failed for ${dir%/}"
+              failed="$failed ${dir%/}"
+            fi
+          done
+          if [ -n "$failed" ]; then
+            echo "Failed:$failed"
+            exit 1
+          fi
+          echo "All $total skills pass skills-ref validate."
 
   actionlint:
     name: actionlint

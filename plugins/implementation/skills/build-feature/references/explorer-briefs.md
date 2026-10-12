@@ -16,8 +16,9 @@ they return, or when you have to explore without subagents.
 
 ## 1. Dispatch mechanics
 
-- Send every explorer call in **one message**. Calls issued in separate turns
-  run one after another and the phase takes three times as long.
+- Start every explorer at once (in Claude Code, all the Agent calls in **one
+  message**). Calls issued in separate turns run one after another and the
+  phase takes three times as long.
 - Use a read-only agent type when the harness has one. In Claude Code that is
   the built-in `Explore` subagent; ask for "medium" thoroughness for M
   features and "very thorough" for L. If you must use a general-purpose agent,
@@ -151,11 +152,12 @@ For the user:     <questions only a human can answer>
 
 ## 5. Exploring without subagents
 
-Run the same angles yourself, in the order C, A, B (D for L). Doing C first
-means you know how to run tests before you need to, and it surfaces the
-contributor docs that explain the architecture. Time-box each angle and stop
-when you can fill its row in the codebase map; reading every file in a
-directory is not exploration, it is avoidance.
+When your agent cannot run subagents, run the same angles yourself, one after
+another, in the order C, A, B (D for L), and say in the G2 message that they
+ran sequentially. Doing C first means you know how to run tests before you
+need to, and it surfaces the contributor docs that explain the architecture.
+Time-box each angle and stop when you can fill its row in the codebase map;
+reading every file in a directory is not exploration, it is avoidance.
 
 ## 6. Search commands worth knowing
 
