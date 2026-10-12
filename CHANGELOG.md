@@ -8,6 +8,10 @@ Each plugin's version lives in its `plugin.json` and its marketplace entry, and 
 
 ## [Unreleased]
 
+### Fixed
+
+- `frontend` 1.0.1: `ui-design-direction`'s `scan-hardcoded.mjs` no longer hangs on a Tailwind arbitrary value like `[9/999/999/...]`. Its layout-only check could backtrack exponentially (about 4.6 s at 107 characters, growing about 6x per extra segment); it now runs in linear time, with a self-test that guards it.
+
 ## [1.0.0] - 2026-10-12
 
 First public release: six plugins with 28 skills, all at plugin version 1.0.0.

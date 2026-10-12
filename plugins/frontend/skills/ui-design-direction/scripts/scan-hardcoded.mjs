@@ -124,7 +124,7 @@ const NAMED_IN_PROP = new RegExp(`(?<![\\w-])(?:${COLOR_PROPS})['"]?\\s*[:=]\\s*
 const NAMED_WORD = new RegExp(`(?<![\\w.$@#/-])(${NAMED_ALT})(?![\\w.-])`, 'i');
 const ARBITRARY = /(?<![\w])([a-z][a-z0-9-]*)-\[([^\]\s'"`]+)\](?!:)/gi;
 const ARBITRARY_PROP = /(?<![\w\]-])\[((?:--)?[a-z][\w-]*):([^\]\s'"`]+)\](?!:)/gi;
-const LAYOUT_ONLY = /^(?:(?:\d+(?:\.\d+)?|\.\d+)(?:%|fr|vh|vw|dvh|svh|lvh|ch|cqw|cqh)|\d+\/\d+|auto|min-content|max-content|fit-content|span|subgrid|full|[_,()])+$/i;
+const LAYOUT_ONLY = /^(?:(?:\d+(?:\.\d+)?|\.\d+)(?:%|fr|vh|vw|dvh|svh|lvh|ch|cqw|cqh)|\d+\/\d+(?!\d)|auto|min-content|max-content|fit-content|span|subgrid|full|[_,()])+$/i;
 const PALETTE =
   /(?<![\w-])(?:bg|text|border(?:-[xytrblse])?|ring|ring-offset|outline|fill|stroke|from|via|to|divide|placeholder|decoration|shadow|inset-shadow|inset-ring|accent|caret)-(?:(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(?:50|[1-9]00|950)|white|black)(?:\/\d+)?(?![\w-])/;
 const JS_STYLE_KEYS = (() => {
@@ -673,10 +673,19 @@ function selftest() {
     ['same-line token-exempt comment', '.logo { color: #ff6600; } /* token-exempt: brand mark */', 'css'],
     ['comment-only line', '// padding: 13px was too tight', 'ts'],
     ['layout-only Tailwind brackets', '<div className="grid-cols-[1fr_2fr] w-[50%]" />', 'tsx'],
+    ['fraction Tailwind brackets', '<div className="aspect-[16/9] col-[1/3]" />', 'tsx'],
   ];
   for (const [label, text, ext] of quiet) {
     check(`quiet: ${label}`, () => ids(text, ext).length === 0 || `got: ${ids(text, ext).join(', ')}`);
   }
+  // A fraction may not end mid-number: without the (?!\d) lookahead, a digit run after a slash can split
+  // across loop iterations in many ways, and a value like 9/999/999/... backtracks exponentially.
+  check('layout-only regex has no catastrophic backtracking', () => {
+    const start = process.hrtime.bigint();
+    const matched = LAYOUT_ONLY.test('9/' + '999/'.repeat(26) + 'x');
+    const ms = Number(process.hrtime.bigint() - start) / 1e6;
+    return (!matched && ms < 500) || `took ${ms.toFixed(0)} ms`;
+  });
   check('counts var() references for the mode decision', () =>
     scanText('.a { color: var(--x); background: var(--y); }', 'css', {}, null).tokenRefs === 2);
 
