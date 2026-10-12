@@ -21,7 +21,7 @@ Include:
 - **Expected vs actual**: what you expected the agent to do, and what it did. Paste the relevant part of the output.
 - **Environment**: operating system, the model if you chose one, and other plugins or personal skills you have installed. Other skills compete for the same requests, so they matter for "it never triggers" reports.
 
-For a skill that never loads, also check `/context` in a session: when the skill listing is over its budget, Claude Code drops some descriptions, and the README explains how to raise the budget.
+For a skill that never loads, also check `/context` in a session: when the skill listing is over its budget, Claude Code drops some descriptions, and [docs/install.md](docs/install.md#skill-listing-budget) explains how to raise the budget.
 
 Remove secrets, tokens, internal hostnames and customer data from anything you paste.
 
