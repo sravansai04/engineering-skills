@@ -135,7 +135,7 @@ Work through this before switching the repository to public, and keep it for ref
 
   If you have it, also run a secret scanner over the history (`gitleaks git .`).
 - [ ] Commit author and committer emails will become public. Check them with `git log --all --format='%an <%ae> / %cn <%ce>' | sort -u`, and set `user.email` to the private no-reply address GitHub provides (Settings, Emails) before the first public commit. Set it in the repository's own config (`git config user.email ...`), and for other clones of it, with an `includeIf "gitdir:..."` section in your global git config, so a fresh clone on another machine doesn't fall back to a work address. In GitHub's Settings, Emails, also turn on **Keep my email addresses private** (web merges then use the no-reply address) and **Block command line pushes that expose my email**. Run the check again before every release tag.
-- [x] The README describes the repository as public: anonymous install with `claude plugin marketplace add sravansai04/engineering-skills`, with private-fork credentials only in a collapsed note.
+- [x] The README describes the repository as public: anonymous install with `claude plugin marketplace add sravansai04/engineering-skills`, and private-fork credentials appear only in docs/install.md.
 - [ ] `.claude-plugin/marketplace.json` lists all six plugins, each with a `plugin.json`, and the versions agree.
 - [ ] `LICENSE`, `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `SECURITY.md`, `SUPPORT.md` and the issue and pull request templates are on the default branch.
 

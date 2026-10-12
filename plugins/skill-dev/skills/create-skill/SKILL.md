@@ -261,7 +261,7 @@ Fix every error your change introduced. Report, do not silently fix, errors that
 
 ### 9. Update the catalog and bump the version
 
-- **README**: add the skill to its plugin's catalog table, matching the existing row format and ordering. The one-line summary should agree with the first clause of the description.
+- **README**: add the skill to its plugin's catalog table, matching the existing row format and ordering: a short "Use it when" line that agrees with the description's trigger, and a "Try" prompt taken from the skill's should-trigger evals.
 - **Version**: bump `version` in `plugins/<plugin>/.claude-plugin/plugin.json` and in the plugin's entry in `.claude-plugin/marketplace.json`, keeping the two identical. Installed copies are pinned to that string, so without a bump existing users never receive the change. Semver: new skill or capability, minor; wording, description or bug fix, patch; renaming or removing a skill, major (it breaks `/<plugin>:<name>` in Claude Code, and invoking it by name in any agent). If `plugin.json` is missing or has no `version`, say so in the report; do not invent one.
 - **Changelog**: add an entry if the repo keeps one.
 

@@ -28,6 +28,7 @@ Each plugin's version lives in its `plugin.json` and its marketplace entry, and 
 
 ### Fixed
 
+- `skill-dev` 1.1.1: `create-skill` describes the README catalog's new row format ("Use it when" and "Try").
 - `frontend` 1.0.1: `ui-design-direction`'s `scan-hardcoded.mjs` no longer hangs on a Tailwind arbitrary value like `[9/999/999/...]`. Its layout-only check could backtrack exponentially (about 4.6 s at 107 characters, growing about 6x per extra segment); it now runs in linear time, with a self-test that guards it.
 
 ## [1.0.0] - 2026-10-12
