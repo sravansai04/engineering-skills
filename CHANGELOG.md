@@ -8,7 +8,7 @@ Each plugin's version lives in its `plugin.json` and its marketplace entry, and 
 
 ## [Unreleased]
 
-## [1.0.0] - 2026-10-09
+## [1.0.0] - 2026-10-12
 
 First public release: six plugins with 28 skills, all at plugin version 1.0.0.
 
