@@ -1,7 +1,7 @@
 {
   "name": "frontend",
   "description": "Shape and check user interfaces: decide a visual direction and encode it as design tokens, verify UI changes in a real browser and write or de-flake end-to-end tests, and review web UI accessibility against WCAG 2.2 AA.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": {
     "name": "Sravan Sai Rahul Nalla"
   },
