@@ -1,16 +1,15 @@
 ---
 name: plan-feature
 description: "Writes a reviewable implementation plan before any code: acceptance criteria, prior art, change surface, risks and scale, rollout and rollback, and small verifiable slices. Use for \"plan this feature\", \"break this ticket into PRs\", \"write a design doc\", \"write an RFC\", or \"technical spec\". Not for building it (build-feature), running a written plan (execute-plan), vague ideas (brainstorm-spec), one migration (db-migration-safety), one API's shape (api-design), or an ADR (adr-writer)."
-argument-hint: "[feature description, ticket link, or path to a spec]"
 ---
 
 # Plan a Feature Before Building It
 
 Turn a feature request into a written plan that a reviewer can approve and an implementer (human or agent) can execute one small, safe step at a time. The plan exists to move the expensive mistakes (wrong requirement, reinvented utility, missed consumer, irreversible migration, unshippable mega-PR) to the cheapest moment to fix them: before any code exists.
 
-Request to plan: $ARGUMENTS
+Request to plan: the skill's arguments (in Claude Code, typed arguments appear after ARGUMENTS: at the end of this skill).
 
-If `$ARGUMENTS` is empty (as it is when this skill loads on its own), take the request from the conversation. Ask for a one-sentence description, plus the ticket or spec if one exists, only when neither contains a request.
+If none were given (as when this skill loads on its own), take the request from the conversation. Ask for a one-sentence description, plus the ticket or spec if one exists, only when neither contains a request.
 
 ## Before you start: size the change and pick the plan depth
 
@@ -28,7 +27,7 @@ When in doubt between two sizes, pick the larger one but keep each section short
 
 Work through the steps in order. Steps 2 to 7 often loop: exploring the code reveals a new question, and a spike can overturn a design choice. Update the plan rather than pretending the first pass was right.
 
-Companion skills are named as `plugin:skill` (for example `data-api:db-migration-safety`) and listed under Related skills. When one isn't installed, the matching section of `references/risk-checklist.md` usually has the short version.
+Companion skills are named as `plugin:skill` (for example `data-api:db-migration-safety`, which an agent that lists skills by bare name knows as `db-migration-safety`) and listed under Related skills. When one isn't installed, the matching section of `references/risk-checklist.md` usually has the short version.
 
 ### 1. Clarify the goal and write acceptance criteria
 
@@ -59,7 +58,7 @@ Search before inventing. Most features rhyme with something already in the repo,
 4. **Record what to reuse.** Build a short table of existing helpers, base classes, middleware, components, test fixtures, and conventions (error handling, validation, logging, naming, test layout) the change should follow, each with its path. Cite `path:line` so the reviewer can check.
 5. **Find every consumer of anything you might change.** Callers of a function, readers of a table, clients of an endpoint, subscribers to an event, parsers of a file format. Unseen consumers are the most common source of "it worked in the PR and broke in production".
 
-In a large repository, run independent searches in parallel (for example with subagents, if the environment provides them) and collect their findings with file paths.
+In a large repository, run independent searches in parallel (for example with subagents, if your agent can run them, such as Claude Code's Agent tool or OpenCode's subagents) and collect their findings with file paths. Without subagents, run the same searches one after another yourself.
 
 ### 3. Map the change surface
 
@@ -218,7 +217,7 @@ Stronger plan:
 - `review-suite:secure-code-review` when the change touches authentication, authorization or sensitive data.
 - `workflow:adr-writer` for a significant, hard-to-reverse decision, and `workflow:pr-description` for each slice's pull request.
 
-If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
+Skills are named here as `plugin:skill`; an agent that lists skills by bare name knows each one by the part after the colon (`review-suite:pr-review` is `pr-review`). If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
 
 ## Reference files
 

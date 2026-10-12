@@ -8,6 +8,24 @@ Each plugin's version lives in its `plugin.json` and its marketplace entry, and 
 
 ## [Unreleased]
 
+### Added
+
+- Cross-agent use: every skill is now a standard [Agent Skills](https://agentskills.io) skill, so it also loads in tools that support the standard, such as OpenCode, Codex, Cursor, Gemini CLI and GitHub Copilot. Install with the `skills` CLI (`npx skills add sravansai04/engineering-skills`), by copying a skill folder into `.agents/skills/`, or by uploading one to ChatGPT where Skills are available. The README's "Use with other agents" section lists what differs outside Claude Code.
+- CI: an **Agent Skills spec (skills-ref)** job runs the standard's reference validator (`skills-ref` 0.1.1, checksum-pinned) on every skill folder.
+- `scripts/validate_skills.py` enforces portability: frontmatter limited to the standard's fields, no Claude Code arguments placeholder in `SKILL.md` or reference files, and the explanation sentence wherever `${CLAUDE_SKILL_DIR}` is used outside `allowed-tools`. Skill names must also follow the standard's hyphen rules. `--selftest` covers each rule on throwaway skills.
+
+### Changed
+
+- All six plugins are now version 1.1.0.
+- `argument-hint` is removed from every skill: it is a Claude Code-only autocomplete hint that other tools and the reference validator reject. Each skill says in its body what arguments it takes.
+- The `$ARGUMENTS` placeholders are replaced by plain references to the arguments. Claude Code still receives them, because it appends the user's input after `ARGUMENTS:` when a skill has no placeholder.
+- Every skill that uses `${CLAUDE_SKILL_DIR}` explains it once in `SKILL.md`, so other agents read it as the skill's own folder.
+- Steps that relied on a Claude Code-only tool (subagents, AskUserQuestion, task-list tools) name the capability first and give a fallback: `parallel-review`, `build-feature` and `execute-plan` run their lanes one after another without subagents.
+- `skill-dev:create-skill` creates and checks portable agent skills: its checker flags the arguments placeholder and an unexplained `${CLAUDE_SKILL_DIR}`, and with the new `--portable` flag fails on non-standard frontmatter fields (without it they only warn, so a Standalone skill that stays in Claude Code can keep `disable-model-invocation: true`). Its description now names "Claude Code or any Agent Skills tool".
+- Every `## Related skills` list says that the `plugin:skill` names map to bare skill names in agents that list skills that way.
+- `pr-description` shows the title, body and target branch and waits for a go-ahead before pushing, creating or editing a PR unless the request explicitly asked for that, instead of relying on Claude Code's permission prompt.
+- `CONTRIBUTING.md`, the pull request template and `docs/testing-skills.md` describe the portability rules and the new check.
+
 ### Fixed
 
 - `frontend` 1.0.1: `ui-design-direction`'s `scan-hardcoded.mjs` no longer hangs on a Tailwind arbitrary value like `[9/999/999/...]`. Its layout-only check could backtrack exponentially (about 4.6 s at 107 characters, growing about 6x per extra segment); it now runs in linear time, with a self-test that guards it.

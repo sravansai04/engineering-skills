@@ -45,8 +45,8 @@ too unclear to explore, so there is no early G1; the questions wait for G2.
 
 ## Phase 2: Explore
 
-One message, three `Explore` subagent calls, each with the shared preamble and
-return contract from `explorer-briefs.md`:
+One message, three `Explore` subagent calls (Claude Code's read-only type), each
+with the shared preamble and return contract from `explorer-briefs.md`:
 
 - **A, closest analog:** "...find the existing feature most similar to a
   filtered list CSV export and trace it end to end..."

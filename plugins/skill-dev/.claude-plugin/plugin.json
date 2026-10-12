@@ -1,7 +1,7 @@
 {
   "name": "skill-dev",
-  "description": "Author, test and maintain Claude Code skills: turn a repeated workflow into a skill, fix one that never triggers or fires on everything, and measure triggering and output in fresh sessions against a no-skill baseline before it ships.",
-  "version": "1.0.0",
+  "description": "Author, test and maintain agent skills (SKILL.md): turn a repeated workflow into a skill, fix one that never triggers or fires on everything, and measure triggering and output in fresh sessions against a no-skill baseline before it ships.",
+  "version": "1.1.0",
   "author": {
     "name": "Sravan Sai Rahul Nalla"
   },

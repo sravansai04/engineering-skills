@@ -26,9 +26,11 @@ for p in plugins/*/; do claude plugin validate "$p" --strict; done
 - `create-skill` also bundles a static checker for a single skill and for the size of the whole listing:
 
   ```bash
-  python3 -I plugins/skill-dev/skills/create-skill/scripts/check_skill.py plugins/<plugin>/skills/<skill>
+  python3 -I plugins/skill-dev/skills/create-skill/scripts/check_skill.py --portable plugins/<plugin>/skills/<skill>
   python3 -I plugins/skill-dev/skills/create-skill/scripts/check_skill.py --listing .
   ```
+
+- **Portability.** The skills must also work in other agents that follow the [Agent Skills](https://agentskills.io) standard. The repository validator fails on what only Claude Code understands: a frontmatter field outside the standard (such as `argument-hint`), the `$ARGUMENTS` placeholder, or a `${CLAUDE_SKILL_DIR}` with no explanation sentence. CI's **Agent Skills spec (skills-ref)** job also runs the standard's reference validator on every skill; CONTRIBUTING.md shows how to run it locally. When a change touches a step that relies on a Claude Code-only tool (subagents, AskUserQuestion, task tools), it is worth trying one eval prompt in a second agent too, for example Codex or OpenCode after `npx skills add`, to check that the fallback path reads sensibly.
 
 ## 2. The two eval files
 
@@ -180,7 +182,7 @@ The review bar in [CONTRIBUTING.md](../CONTRIBUTING.md) asks for a before and af
 ```markdown
 ### Evidence
 
-Static: validate_skills.py pass · claude plugin validate --strict pass (all plugins)
+Static: validate_skills.py pass · claude plugin validate --strict pass (all plugins) · skills-ref pass (CI)
 
 Triggering (3 runs per prompt, claude 2.x.y, default model; listing within budget)
 | Query | Expect | Before | After |

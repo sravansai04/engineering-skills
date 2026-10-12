@@ -45,11 +45,11 @@ When you merge findings:
 
 ## 3. Choose what to verify
 
-Verify **every critical and high finding** after dedupe, and also any finding that someone wants to use to block the merge. Run verifiers in parallel (in waves of about 10): one Agent call per finding, or one per file when several findings in the same file are related. Use the verifier brief in `subagent-briefs.md`. Paste each finding under its review id with `raised_by`, `source_id`, and the persona name stripped, then match the returned verdicts back by review id.
+Verify **every critical and high finding** after dedupe, and also any finding that someone wants to use to block the merge. Run verifiers in parallel (in waves of about 10): one verifier subagent per finding (an Agent tool call in Claude Code), or one per file when several findings in the same file are related. Use the verifier brief in `subagent-briefs.md`. Paste each finding under its review id with `raised_by`, `source_id`, and the persona name stripped, then match the returned verdicts back by review id.
 
 Why this matters: a persona that has just found an issue is anchored on it. A fresh context with an explicit mandate to refute catches what the original reviewer missed. Common examples are an upstream guard, middleware that already validates, a framework default, code that can't be reached, and a pre-existing condition. Each false positive in a review costs triage time and costs credibility for every finding that follows it.
 
-When there are three or fewer high findings and the target is small, you can verify them inline yourself instead of spawning verifiers. You still have to re-read the code from scratch and actually try to refute each one. Don't just re-read the persona's evidence.
+When there are three or fewer high findings and the target is small, you can verify them inline yourself instead of spawning verifiers. You still have to re-read the code from scratch and actually try to refute each one. Don't just re-read the persona's evidence. Verify the same way, one finding after another, when your agent cannot run subagents at all, and say in Coverage that verification ran in the same context as the review.
 
 ## 4. Apply verdicts
 

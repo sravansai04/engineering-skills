@@ -8,7 +8,6 @@ description: >-
   changed between v2 and v3", or an error like "has no attribute". Not for
   bugs in your own code (debug-root-cause), red CI (ci-failure-triage), or
   doing the upgrade (refactor-safely).
-argument-hint: "[library, API or config key, error message, or versions to compare]"
 allowed-tools: Read, Grep, Glob, Bash(npm ls:*), Bash(npm view:*), Bash(npm explain:*), Bash(go list -m:*), Bash(go doc:*), Bash(composer show:*), Bash(bundle info:*), Bash(git ls-remote:*), Bash(gh release list:*), Bash(gh release view:*)
 ---
 
@@ -25,9 +24,10 @@ This skill replaces recall with evidence: pin the version the project actually r
 read documentation for *that* version, and confirm every symbol you write against that
 version's own artifact before it ships.
 
-What to check: $ARGUMENTS
+What to check: the skill's arguments
+(in Claude Code, typed arguments appear after ARGUMENTS: at the end of this skill).
 
-If that is empty (as it is when this skill loads on its own, mid-task), take it from the
+If none were given (as when this skill loads on its own, mid-task), take it from the
 conversation: the API or config key about to be written, the error that names a library
 symbol, or the two versions being compared.
 
@@ -124,8 +124,9 @@ or its symbols to an external service unless your team set that service up for i
 **A. Context7, only if it is actually available.** Look in your tool list for a tool whose
 name ends in `resolve-library-id` and a companion docs tool (`query-docs`; older server
 versions call it `get-library-docs` with different parameter names). The prefix depends on
-how it was installed: `mcp__context7__...` when registered with `claude mcp add`,
-`mcp__plugin_context7_context7__...` when it comes from a plugin. If your environment loads
+the agent and how the server was installed; in Claude Code it is `mcp__context7__...` when
+registered with `claude mcp add` and `mcp__plugin_context7_context7__...` when it comes from
+a plugin, and other agents use their own naming. If your environment loads
 MCP tools lazily, search the tool registry for "context7" before concluding it is absent.
 If there is no such tool but the vendor CLI is set up (`command -v ctx7` succeeds), the same
 two steps are `ctx7 library <name> "<query>"` then `ctx7 docs <libraryId> "<query>"`. Do not
@@ -361,7 +362,7 @@ For upgrades, add the impact table:
 - `implementation:verify-before-done`: the broader end-of-task verification; step 3 here is
   the API-level slice of it.
 
-If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
+Skills are named here as `plugin:skill`; an agent that lists skills by bare name knows each one by the part after the colon (`review-suite:pr-review` is `pr-review`). If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
 
 ## Reference files
 
@@ -372,5 +373,6 @@ If a skill named here isn't installed, give the short version inline and list th
   llms.txt, changelog and migration-guide navigation, GitHub release/tag tactics, reading
   installed source fast, fetching a version you have not installed, config validation
   commands. Read when step 2 stalls, for upgrades, or for new dependencies.
-- `references/context7-setup.md`: optional commands to connect Context7 and how to verify
-  it. Read only when the user asks how to enable it or wants faster repeated lookups.
+- `references/context7-setup.md`: optional commands to connect Context7 (Claude Code's,
+  plus where other MCP clients find theirs) and how to verify it. Read only when the user
+  asks how to enable it or wants faster repeated lookups.

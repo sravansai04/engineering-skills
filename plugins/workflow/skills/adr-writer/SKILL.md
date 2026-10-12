@@ -1,14 +1,13 @@
 ---
 name: adr-writer
 description: "Writes, accepts, supersedes, deprecates, and reviews Architecture Decision Records in Nygard or MADR style, following the repo's folder, numbering, and template. Use for \"write an ADR\", \"document why we chose X over Y\", \"supersede ADR 12\", \"does this need an ADR\", or to offer one when a discussion settles a hard-to-reverse choice. Not for implementation plans, design docs, or RFCs (plan-feature), postmortems (incident-postmortem), or READMEs."
-argument-hint: "[decision topic | ADR number to accept, supersede, deprecate, or review]"
 ---
 
 # ADR Writer
 
 An Architecture Decision Record covers one significant decision: what forced it, which options were weighed, what was chosen, and what the team accepted as the cost. Its reader is an engineer a year from now who wasn't in the room. Honest reasoning about trade-offs is what makes it useful, not the format.
 
-The user's input is in `$ARGUMENTS`: a topic, an ADR number, or empty. If empty, work out the decision from the conversation.
+The user's input is the skill's arguments (in Claude Code, typed arguments appear after ARGUMENTS: at the end of this skill): a topic, an ADR number, or nothing. If none were given, work out the decision from the conversation.
 
 ## Workflow
 
@@ -215,7 +214,7 @@ Checklist gaps: <step 9 items not met, or "none">
 - `workflow:pr-description` describes the PR that adds or supersedes the ADR.
 - `workflow:incident-postmortem` covers postmortems, whose action items often call for an ADR.
 
-If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
+Skills are named here as `plugin:skill`; an agent that lists skills by bare name knows each one by the part after the colon (`review-suite:pr-review` is `pr-review`). If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
 
 ## Reference files
 

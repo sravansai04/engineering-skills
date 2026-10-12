@@ -1,14 +1,13 @@
 ---
 name: tdd
 description: "Builds code test-first in a red-green-refactor loop, including regression-test-first bug fixes and tests for untested code, and answers test-design questions (what to mock, which level). Use for \"use TDD\", \"write the test first\", \"write a regression test for this bug\", \"write tests for this module\". Not for a whole ticket (build-feature), e2e tests (browser-testing), an unexplained or flaky failure (debug-root-cause), restructuring (refactor-safely), or red CI (ci-failure-triage)."
-argument-hint: "[behavior to build, bug to reproduce, or untested module]"
 ---
 
 # Test-Driven Development
 
 Grow code in small, verified steps. Each test states the next behavior wanted; watching it fail proves it can detect that behavior's absence. Write just enough code to pass, then clean up while green. A test seen going red then green is evidence; one never seen failing is only a hope. Code that is awkward to test is usually awkward to use, so the loop also shapes design.
 
-If `$ARGUMENTS` names a behavior or a bug, use it to seed the test list or the reproduction. Otherwise take the request from the conversation.
+If the skill's arguments (in Claude Code, typed arguments appear after ARGUMENTS: at the end of this skill) name a behavior or a bug, use them to seed the test list or the reproduction. Otherwise take the request from the conversation.
 
 ## Workflow
 
@@ -208,7 +207,7 @@ Change the order of work, not whether it gets tested.
 - `frontend:browser-testing` for end-to-end and browser tests, and `workflow:ci-failure-triage` when a test passes locally but CI is red.
 - `implementation:verify-before-done` for the full pre-merge check, and `workflow:commit-message` for commit wording.
 
-If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
+Skills are named here as `plugin:skill`; an agent that lists skills by bare name knows each one by the part after the colon (`review-suite:pr-review` is `pr-review`). If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
 
 ## Reference files
 

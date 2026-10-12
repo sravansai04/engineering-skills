@@ -1,16 +1,15 @@
 ---
 name: parallel-review
 description: "Runs a deep review: one parallel subagent per reviewer angle (correctness, security, performance, data, architecture, tests, API compatibility, reliability, UX), then re-verifies serious findings into one ranked report. Use for \"review this from every angle\", \"multi-agent review\", \"get several reviewers on this PR\", or a big, risky change. Not for a routine PR (pr-review), one angle (secure-code-review, performance-review, accessibility-review), or replying to reviewers (respond-to-review)."
-argument-hint: "[branch, PR number, or paths] [optional persona list]"
 allowed-tools: Bash(git diff:*), Bash(git log:*), Bash(git ls-files:*), Bash(git merge-base:*), Bash(git fetch:*), Bash(git rev-parse:*), Bash(git symbolic-ref:*), Bash(git status:*), Bash(git show:*), Bash(git blame:*), Bash(gh pr view:*), Bash(gh pr diff:*), Bash(gh repo view:*), Bash(python3 -I "${CLAUDE_SKILL_DIR}/scripts/scope_signals.py":*), Bash(python3 -I ${CLAUDE_SKILL_DIR}/scripts/scope_signals.py:*)
-compatibility: Designed for Claude Code with subagents (the Agent tool) and git. gh is optional, for pull request targets. The scope helper needs python3 3.8 or later.
+compatibility: Needs git and works best in an agent that can run subagents in parallel (such as Claude Code's Agent tool or OpenCode's subagents); without them, the lanes run one after another in one session. gh is optional, for pull request targets. The scope helper needs python3 3.8 or later.
 ---
 
 # Parallel Review
 
 A parallel review examines one target from several independent angles at once. Each persona is a fresh subagent with a narrow lane and a fixed output schema, so its findings stay specific to that lane and can be merged mechanically afterwards. You act as the orchestrator. You pin the target, pick the personas, write self-contained briefs, launch the personas in parallel, then dedupe their findings, try to refute every serious one, and deliver one prioritized report. The review only reads code. Fixing what it finds is a separate step.
 
-Target from the invocation, if any: `$ARGUMENTS`
+Target from the invocation, if any: the skill's arguments, what the user passed when invoking this skill (in Claude Code, typed arguments appear after ARGUMENTS: at the end of this skill). They name the target (a branch, PR number, or paths) and may list the personas to run. If there are none, take the target from the user's message.
 
 ## Before you start: is a parallel review warranted?
 
@@ -30,7 +29,7 @@ If the user explicitly asks for a parallel review on a small target, run a trimm
 
 **Confirm before spending.** If the user did not explicitly ask for a parallel or multi-agent review, state the plan in one line (personas, slices, estimated agent count) and wait for a go-ahead before launching anything. If they did ask, still state the plan in one line before launching, and wait only if it needs more than about 15 agents.
 
-**No subagents available** (for example, you are already running inside one): run the selected lanes yourself, one at a time, using the same persona files and schema, and say so in Coverage.
+**Subagents.** The personas and verifiers run as subagents, so this works best in an agent that can launch several at once, such as Claude Code's Agent tool or OpenCode's subagents. **No subagents available** (your agent has none, or you are already running inside one): run the same briefs yourself, one after another in the current session, using the same persona files and schema. Finish one lane and record its result before starting the next, and verify high and critical findings the same way, re-reading the code from scratch. Say in Coverage that the lanes ran sequentially, and that the personas and verifiers were less independent than separate reviewers, because one context saw every lane.
 
 ## Workflow
 
@@ -50,7 +49,7 @@ Every persona and verifier brief carries the same rule (`references/subagent-bri
 
 ### 2. Measure scope and gather context
 
-Run the bundled scope helper. It reports size, language mix, path-based risk signals, and suggested personas:
+Run the bundled scope helper. It reports size, language mix, path-based risk signals, and suggested personas. `${CLAUDE_SKILL_DIR}` stands for this skill's folder, the directory that contains this SKILL.md. Claude Code fills it in; in other tools, use that folder's path.
 
 ```bash
 git diff --numstat BASE_SHA HEAD_SHA | python3 -I "${CLAUDE_SKILL_DIR}/scripts/scope_signals.py" -
@@ -66,7 +65,7 @@ Its suggestions come from path names, so read the code before you trust or dismi
 - **Project commands.** Test, type-check, and lint commands from the README, `Makefile`, `package.json`, `pyproject.toml`, `build.gradle`, or CI files. Don't assume a stack. Pass them only if the trust check passed and the review directory has dependencies installed.
 - **Scale.** Table sizes, traffic, and consumers. If unknown, say so in the brief.
 
-**Large targets.** Above roughly 60 files or 3,000 changed lines, slice the file list by subsystem and run the relevant personas once per slice, each brief getting its slice plus a one-line map of the others. Claude Code runs a limited number of subagents at once (10 by default, `CLAUDE_CODE_MAX_TOOL_USE_CONCURRENCY`) and refuses new launches when a session has too many running (`CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS`). Both are configurable and may change between versions, so plan waves of at most about 10 agents.
+**Large targets.** Above roughly 60 files or 3,000 changed lines, slice the file list by subsystem and run the relevant personas once per slice, each brief getting its slice plus a one-line map of the others. Agents limit how many subagents run at once. Claude Code runs 10 by default (`CLAUDE_CODE_MAX_TOOL_USE_CONCURRENCY`) and refuses new launches when a session has too many running (`CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS`). Both are configurable and may change between versions, and other agents set their own limits, so plan waves of at most about 10 agents.
 
 ### 3. Choose personas
 
@@ -92,7 +91,7 @@ A subagent starts with a fresh context: it does not see this conversation, the f
 
 ### 5. Launch the personas in parallel
 
-Put every Agent call for a wave in a **single assistant message**; calls in the same turn run concurrently, while one call per turn serializes the review. Call shape, subagent type, and model choice are in `references/subagent-briefs.md` → The Agent call. Wait for the wave to finish before starting the next one or aggregating.
+Start every subagent in a wave at the same time. In Claude Code, put every Agent tool call for a wave in a **single assistant message**; calls in the same turn run concurrently, while one call per turn serializes the review. Call shape, subagent type, and model choice are in `references/subagent-briefs.md` → Launching the subagents. Wait for the wave to finish before starting the next one or aggregating. Without subagents, work through the briefs one after another as described under "No subagents available" above.
 
 ### 6. Validate the results
 
@@ -104,11 +103,11 @@ Follow `references/aggregation.md` §2: merge findings that share a mechanism, k
 
 ### 8. Skeptically verify every high and critical finding
 
-Send each surviving high or critical finding to a verifier built from the verifier brief in `references/subagent-briefs.md`, all in one message (or in waves). The verifier tries to refute the finding from a fresh context, under a neutral label that does not name the persona. Apply the verdicts per `references/aggregation.md` §3–4. Give medium and low findings the one-read sanity check in §6.
+Send each surviving high or critical finding to a verifier built from the verifier brief in `references/subagent-briefs.md`, all at once (in Claude Code, in one message), or in waves. The verifier tries to refute the finding from a fresh context, under a neutral label that does not name the persona. Apply the verdicts per `references/aggregation.md` §3–4. Give medium and low findings the one-read sanity check in §6.
 
 ### 9. Rank and report
 
-Rank per `references/aggregation.md` §5, then fill in `references/output-template.md`, leading with the verdict (Block / Fix before merge / Merge with follow-ups / Merge, from the ladder in `references/finding-schema.md`). Always include the Coverage section: personas not run, lanes failed, the trust decision, checks that need a runtime, and assumptions. Without it, "no issues" cannot be told apart from "not looked at". Before you show or post the report, make sure no secret value appears in it.
+Rank per `references/aggregation.md` §5, then fill in `references/output-template.md`, leading with the verdict (Block / Fix before merge / Merge with follow-ups / Merge, from the ladder in `references/finding-schema.md`). Always include the Coverage section: personas not run, lanes failed, the trust decision, checks that need a runtime, assumptions, and whether the lanes ran as parallel subagents or sequentially. Without it, "no issues" cannot be told apart from "not looked at". Before you show or post the report, make sure no secret value appears in it.
 
 ### 10. Hand off and clean up
 
@@ -116,7 +115,7 @@ Don't apply fixes as part of the review. Offer next steps and name the matching 
 
 ## Report format
 
-Fill in `references/output-template.md`: the verdict first, then findings ranked by severity in the shared finding format, each marked Confirmed or Likely with its verifier's verdict for high and critical ones, then pre-existing issues, then the Coverage section (personas run and not run, lanes failed, the trust decision, checks that need a runtime, assumptions).
+Fill in `references/output-template.md`: the verdict first, then findings ranked by severity in the shared finding format, each marked Confirmed or Likely with its verifier's verdict for high and critical ones, then pre-existing issues, then the Coverage section (personas run and not run, lanes failed, the trust decision, checks that need a runtime, assumptions, and how the lanes ran).
 
 ## Cost and time
 
@@ -128,7 +127,7 @@ Fill in `references/output-template.md`: the verdict first, then findings ranked
 
 ## Examples
 
-**"Review my branch from every angle before I open the PR."** The branch is committed and the checkout is clean, so personas read in place. The scope helper reports 14 files, +620/−80, in `db/migrations/`, `api/handlers/`, and one test file. Six personas (correctness, test-quality, data-database, api-compat, security, performance) launch in one message, with the diff command rather than the 700-line diff. Two high findings go to two verifiers; one is refuted because middleware already scopes the query. Verdict: "Fix before merge".
+**"Review my branch from every angle before I open the PR."** The branch is committed and the checkout is clean, so personas read in place. The scope helper reports 14 files, +620/−80, in `db/migrations/`, `api/handlers/`, and one test file. Six personas (correctness, test-quality, data-database, api-compat, security, performance) launch together in one wave, with the diff command rather than the 700-line diff. Two high findings go to two verifiers; one is refuted because middleware already scopes the query. Verdict: "Fix before merge".
 
 **"Review `src/payments/` from every angle before the release."** A module target: 48 files, about 9k lines, no UI. Eight personas, skipping UX. Correctness and security are sliced into two halves by subdirectory, which makes ten agents in one wave. Churn hotspots go to every brief as priority reading. Pre-existing issues are in scope.
 
@@ -155,12 +154,12 @@ Fill in `references/output-template.md`: the verdict first, then findings ranked
 - `implementation:verify-before-done` after the fixes land.
 - `workflow:git-worktrees` for where to put the review worktree, its setup, and safe cleanup.
 
-If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
+Skills are named here as `plugin:skill`; an agent that lists skills by bare name knows each one by the part after the colon (`review-suite:pr-review` is `pr-review`). If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
 
 ## Reference files
 
 - `references/target-setup.md`: commands for pinning each target type, the working-tree snapshot, the PR fetch order, in-place versus worktree review, the trust check, and cleanup. Read it at step 1.
-- `references/subagent-briefs.md`: persona and verifier brief templates, plus the Agent call shape. Read it before steps 4 and 8.
+- `references/subagent-briefs.md`: persona and verifier brief templates, plus how to launch them (the Agent tool call shape in Claude Code). Read it before steps 4 and 8.
 - `references/finding-schema.md`: the JSON output contract, the severity levels and verdict ladder shared with the other review skills, and the confidence rubric. Paste it into every persona brief.
 - `references/aggregation.md`: validate, re-key, dedupe, verify, and rank rules. Read it before step 6.
 - `references/output-template.md`: the final report skeleton and the style rules. Read it at step 9.

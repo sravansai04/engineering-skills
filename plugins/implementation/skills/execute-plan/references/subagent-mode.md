@@ -330,7 +330,8 @@ For a large diff, or when you want a second opinion, dispatch a separate reviewe
 Ask for a verdict with `file:line` locations (template in
 [subagent-task-prompt.md](subagent-task-prompt.md)). Treat its verdict as input. You still
 re-run the checks and make the decision. Never let an implementer's review of its own work
-be the only review.
+be the only review. Without a subagent tool, run the same rubric yourself and say in the
+report that the review ran in this session, so its independence is reduced.
 
 ---
 

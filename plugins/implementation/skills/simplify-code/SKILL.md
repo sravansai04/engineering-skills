@@ -1,7 +1,6 @@
 ---
 name: simplify-code
 description: "Shrinks just-written code, the branch diff or a named file, without changing behavior: deletes dead code, duplicate helpers, needless abstraction, deep nesting and generated bloat in test-gated batches, and flags any edit a caller could notice. Use for \"simplify this\", \"clean up what you just wrote\", \"de-slop this diff\", \"tighten it up before review\". Not for restructuring or public API changes (refactor-safely), bug hunting (pr-review), or speed (performance-review)."
-argument-hint: "[path or git range; default is this session's edits, else the branch diff]"
 allowed-tools: Bash(git diff:*), Bash(git grep:*), Bash(git log:*), Bash(git show:*), Bash(git ls-files:*), Bash(git status:*), Bash(git symbolic-ref:*), Bash(git merge-base:*), Read, Grep, Glob
 ---
 
@@ -20,9 +19,11 @@ something the next reader must understand and the next change must preserve.
 But a cleanup that silently changes behavior is worse than the bloat it
 removed, so this skill trades a little speed for proof.
 
-The scope is `$ARGUMENTS` when it names a path or a git range. When it is
-empty (as it is when this skill loads on its own), take the scope from the
-user's message, and fall back to the current branch diff (step 2).
+The scope is the skill's arguments
+(in Claude Code, typed arguments appear after ARGUMENTS: at the end of this skill)
+when they name a path or a git range. When none were given (as when this skill
+loads on its own), take the scope from the user's message, and fall back to the
+current branch diff (step 2).
 
 ## Ground rules
 
@@ -117,8 +118,8 @@ Substitute whatever the first command prints. If it fails (no remote default
 set), use the branch the work will merge into. On the default branch itself
 with only uncommitted work, `git diff HEAD` is the scope.
 
-A path or range from `$ARGUMENTS` or the user's message replaces this
-default. For a large path, rank functions by complexity (see
+A path or range from the skill's arguments or the user's message replaces
+this default. For a large path, rank functions by complexity (see
 [references/detection-tooling.md](references/detection-tooling.md)) and start
 with the worst few.
 
@@ -414,7 +415,7 @@ Not verified: <checks the project lacks or you could not run, and why; or "none"
 - `workflow:git-worktrees` to work in a separate checkout when the index
   holds staged work you must not disturb.
 
-If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
+Skills are named here as `plugin:skill`; an agent that lists skills by bare name knows each one by the part after the colon (`review-suite:pr-review` is `pr-review`). If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
 
 ## Reference files
 

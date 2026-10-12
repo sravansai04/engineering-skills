@@ -151,7 +151,7 @@ Work through this before switching the repository to public, and keep it for ref
   - **Restrict deletions** and **Block force pushes**;
   - **Require linear history** (squash merging already produces it);
   - **Require a pull request before merging**, with 1 required approval, **Dismiss stale pull request approvals when new commits are pushed**, **Require approval of the most recent reviewable push**, and **Require conversation resolution before merging**;
-  - **Require status checks to pass**, with **Require branches to be up to date before merging**, adding every job from `.github/workflows/validate.yml` (at the time of writing: Repository validator, both Script self-tests jobs, claude plugin validate --strict, and actionlint). Add them after CI has run once on a pull request, so their exact names appear in the picker.
+  - **Require status checks to pass**, with **Require branches to be up to date before merging**, adding every job from `.github/workflows/validate.yml` (at the time of writing: Repository validator, both Script self-tests jobs, claude plugin validate --strict, Agent Skills spec (skills-ref), and actionlint). Add them after CI has run once on a pull request, so their exact names appear in the picker.
 
   Then, under **Bypass list**, add the **Repository admin** role with the mode **For pull requests only**. GitHub doesn't let you approve your own pull request, so without this a sole maintainer could never merge; with it, you still have to open a pull request and you can't push to main directly.
 - [ ] **Private vulnerability reporting.** Settings, Advanced Security (Code security on older layouts): **Private vulnerability reporting**, Enable. SECURITY.md and CODE_OF_CONDUCT.md both depend on it.

@@ -77,7 +77,7 @@ diff, the color math) with no dependencies.
 | `scripts/keyboard-walk.mjs` | Presses Tab through a page (optionally in a `--setup` state) and records each stop's role, name, and selector; flags missing indicator, obscured/invisible focus, unnamed or role-less stops, positive tabindex, traps, focus getting stuck, unreached controls (one per radio group; scoped to an open modal), and pointer-only elements; optional numbered focus-order screenshot | 0 no leads, 1 leads, 2 error (including an HTTP error, a redirect, or a failed setup) |
 | `scripts/contrast.mjs` | WCAG contrast for hex/rgb/hsl/oklch colors with alpha compositing; PASS/FAIL for 1.4.3, 1.4.11, 1.4.6; nearest passing colors | 0 meets `--target`, 1 below, 2 error |
 
-`${CLAUDE_SKILL_DIR}` in these commands is not a shell variable: replace it with this skill's directory, the path SKILL.md shows for `scripts/`, and keep the quotes.
+`${CLAUDE_SKILL_DIR}` in these commands is not a shell variable: replace it with this skill's directory, the folder that contains SKILL.md (in Claude Code, the path SKILL.md shows for `scripts/`), and keep the quotes.
 
 ```bash
 node "${CLAUDE_SKILL_DIR}/scripts/axe-scan.mjs" http://localhost:3000/ http://localhost:3000/signup \

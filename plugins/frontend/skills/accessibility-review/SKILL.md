@@ -1,7 +1,6 @@
 ---
 name: accessibility-review
 description: "Reviews and fixes web UI accessibility against WCAG 2.2 AA (axe, a scripted keyboard walk, manual keyboard and screen-reader passes), tying each finding to a criterion, element, blocked user, and fix. Use for \"is this page accessible\", \"audit this against WCAG\", \"check this PR for a11y\", \"keyboard users get stuck\", or \"does this color pass contrast\". Not for visual direction or palettes (ui-design-direction), e2e tests (browser-testing), or a whole-PR review (pr-review)."
-argument-hint: "[url | component or file path | pr-number]"
 allowed-tools: Bash(git diff:*), Bash(git log:*), Bash(git show:*), Bash(git grep:*), Bash(gh pr view:*), Bash(gh pr diff:*), Bash(node "${CLAUDE_SKILL_DIR}/scripts/contrast.mjs":*), Bash(node ${CLAUDE_SKILL_DIR}/scripts/contrast.mjs:*), Read, Grep, Glob
 compatibility: The bundled scripts need Node.js 20 or later; axe-scan.mjs also needs playwright and @axe-core/playwright, and keyboard-walk.mjs needs playwright 1.49 or later, resolved from the project or a scratch directory. contrast.mjs has no dependencies.
 ---
@@ -16,8 +15,9 @@ through the older versions it contains, and treats it as a floor, not the defini
 element, and a person who is blocked, and, when asked, **fixes** that are verified the same way
 the problem was found.
 
-The target is `$ARGUMENTS`. If that is empty, take the URL, component, file, or PR from the
-user's message.
+The target is the skill's arguments, what the user passed when invoking this skill
+(in Claude Code, typed arguments appear after ARGUMENTS: at the end of this skill). If none were
+given, take the URL, component, file, or PR from the user's message.
 
 ## Principles behind the workflow
 
@@ -160,7 +160,8 @@ Add the tag, or re-run with the bundled script; if you can do neither, list 2.5.
 tested.
 
 **Bundled script.** Run it from the project root (or that scratch directory). It needs Node 20+,
-`playwright` and `@axe-core/playwright`:
+`playwright` and `@axe-core/playwright`.
+`${CLAUDE_SKILL_DIR}` stands for this skill's folder, the directory that contains this SKILL.md. Claude Code fills it in; in other tools, use that folder's path.
 
 ```bash
 node "${CLAUDE_SKILL_DIR}/scripts/axe-scan.mjs" http://localhost:3000/ http://localhost:3000/checkout \
@@ -430,7 +431,7 @@ traced end to end in the source; a lead from a static read with one link uncheck
 - `implementation:tdd` for test-first fixes, and `implementation:verify-before-done` before you
   claim a fix is complete.
 
-If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
+Skills are named here as `plugin:skill`; an agent that lists skills by bare name knows each one by the part after the colon (`review-suite:pr-review` is `pr-review`). If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
 
 ## Reference files
 

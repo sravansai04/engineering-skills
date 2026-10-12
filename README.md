@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-A [Claude Code](https://code.claude.com/docs) plugin marketplace of 28 skills for the judgment calls around day-to-day software engineering: shaping an idea before anyone builds it, planning and building features test-first, proving a bug's root cause, reviewing code with verified findings, designing APIs and migrations that survive a rolling deploy, the team artifacts around a change, frontend design and browser testing, and writing skills of your own. The skills are language- and framework-agnostic, and each ships with evals you can run to compare it against no skill. What they do differently:
+A [Claude Code](https://code.claude.com/docs) plugin marketplace of 28 skills for the judgment calls around day-to-day software engineering: shaping an idea before anyone builds it, planning and building features test-first, proving a bug's root cause, reviewing code with verified findings, designing APIs and migrations that survive a rolling deploy, the team artifacts around a change, frontend design and browser testing, and writing skills of your own. The skills are language- and framework-agnostic, and each ships with evals you can run to compare it against no skill. They are standard Agent Skills, so they also work in [other agents](#use-with-other-agents) such as Codex and OpenCode. What they do differently:
 
 - **They follow the project, not a default stack.** Each skill finds the project's own test runner, migration tool, commit style, ADR folder and PR template, and uses them.
 - **Review findings are verified and rated one way.** Every review skill marks a finding Confirmed (reproduced or traced end to end) or Likely (one link unverified), and all of them share one severity scale and one verdict ladder.
@@ -17,7 +17,7 @@ A [Claude Code](https://code.claude.com/docs) plugin marketplace of 28 skills fo
 | [`data-api`](#data-api) | 3 | API contract design, zero-downtime database migrations, SQL and query plan review |
 | [`workflow`](#workflow) | 7 | Commits, PR descriptions, answering review comments, git worktrees, CI failure triage, architecture decision records, incident postmortems |
 | [`frontend`](#frontend) | 3 | Visual direction and design tokens, browser verification and end-to-end tests, accessibility review |
-| [`skill-dev`](#skill-dev) | 1 | Creating, testing and fixing Claude Code skills |
+| [`skill-dev`](#skill-dev) | 1 | Creating, testing and fixing agent skills |
 
 A skill is a folder with a `SKILL.md`: YAML frontmatter that tells Claude what the skill does and when to use it, followed by the instructions. Claude loads a skill when a request matches its description, or when you run it by name. Detail that is only sometimes needed sits in `references/` and is read on demand. Some skills also bundle helper `scripts/` and `assets/`. Every skill has `evals/` with test prompts.
 
@@ -123,6 +123,30 @@ To load plugins for a single session, for example while editing a skill:
 claude --plugin-dir ./plugins                  # every plugin in the folder
 claude --plugin-dir ./plugins/implementation   # just one
 ```
+
+---
+
+## Use with other agents
+
+These are standard [Agent Skills](https://agentskills.io), so they load in any tool that supports the standard. The [`skills` CLI](https://github.com/vercel-labs/skills) installs them:
+
+```bash
+npx skills add sravansai04/engineering-skills --list                 # preview the skills
+npx skills add sravansai04/engineering-skills                        # pick skills and agents interactively
+npx skills add sravansai04/engineering-skills -a codex -s pr-review  # one agent, one skill
+```
+
+For Codex, OpenCode, Cursor, Gemini CLI, GitHub Copilot, Cline, Amp and others it installs into the project's shared `.agents/skills/`. `-a <agent>` (`opencode`, `codex`, ...) targets one agent, `-s <skill>` picks skills by name, and `-g` installs for your user instead of the project.
+
+- **By hand:** copy a whole skill folder (not only `SKILL.md`) into `.agents/skills/` or the tool's own skills folder. OpenCode also reads `.claude/skills/`.
+- **ChatGPT:** on plans that have Skills, upload a skill folder under Skills. If it asks for an archive, zip the folder itself, so the archive holds one folder with `SKILL.md` directly inside (for example `cd plugins/review-suite/skills && zip -r pr-review.zip pr-review`). Codex is the better fit for skills that need a repository, git or a terminal.
+
+What differs outside Claude Code:
+
+- The plugin marketplace and the `/plugin:skill` names are Claude Code only; other agents know each skill by its bare name (`pr-review`).
+- Paths to a skill's bundled files are written `${CLAUDE_SKILL_DIR}/...`, which only Claude Code fills in; every skill that uses it says to read it as the skill's own folder.
+- `allowed-tools` is how Claude Code pre-approves a skill's read-only commands; other agents may ignore it and follow their own approval settings, which may run commands without asking. The skills' own rules (confirm before anything outward-facing) apply either way.
+- `parallel-review`, `build-feature` and `execute-plan` run their subagent lanes one after another when the agent can't run subagents.
 
 ---
 
@@ -236,7 +260,7 @@ Bundled shell scripts (in `debug-root-cause`, `verify-before-done`, `git-worktre
 
 | Skill | Invoke | What it does |
 |---|---|---|
-| `create-skill` | `/skill-dev:create-skill [skill idea, or path to an existing skill]` | Creates or fixes a Claude Code skill, measuring triggering in fresh sessions and output against a no-skill baseline before it ships. |
+| `create-skill` | `/skill-dev:create-skill [skill idea, or path to an existing skill]` | Creates or fixes an agent skill (SKILL.md) for Claude Code or any Agent Skills tool, measuring triggering in fresh sessions and output against a no-skill baseline before it ships. |
 
 ---
 

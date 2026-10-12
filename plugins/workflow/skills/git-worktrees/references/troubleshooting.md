@@ -3,6 +3,10 @@
 Error messages below are quoted from git 2.55; wording varies slightly between
 versions, so match on the distinctive part.
 
+`${CLAUDE_SKILL_DIR}` in the commands below is not a shell variable: replace it
+with this skill's directory, the folder that contains SKILL.md (in Claude Code,
+the path SKILL.md shows for `scripts/`), and keep the quotes.
+
 ## Contents
 
 1. Creating worktrees

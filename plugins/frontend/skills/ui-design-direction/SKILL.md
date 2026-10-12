@@ -8,7 +8,6 @@ description: >-
   a palette and fonts", or "this UI looks generic". Not for whole features
   (build-feature), WCAG audits (accessibility-review), or e2e tests
   (browser-testing).
-argument-hint: "[page, screen, or component to design; or a mockup, screenshot, or URL to match]"
 allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/scripts/scan-hardcoded.mjs:*), Bash(node "${CLAUDE_SKILL_DIR}/scripts/scan-hardcoded.mjs":*), Bash(node ${CLAUDE_SKILL_DIR}/scripts/token-contrast.mjs:*), Bash(node "${CLAUDE_SKILL_DIR}/scripts/token-contrast.mjs":*), Bash(git diff:*), Bash(git status:*), Bash(git ls-files:*), Read, Grep, Glob
 compatibility: The bundled checkers need Node.js 18 or later and nothing else. Screenshots use the browser-testing skill's smoke test or the Playwright CLI when available.
 ---
@@ -24,9 +23,10 @@ guess, and the finished UI can be checked against something concrete.
 This skill covers that order end to end: understand the job, find what already exists, commit to a
 direction, encode it, build with it, and verify it with evidence rather than impressions.
 
-Surface to design: $ARGUMENTS
+The surface to design is the skill's arguments, what the user passed when invoking this skill
+(in Claude Code, typed arguments appear after ARGUMENTS: at the end of this skill).
 
-If that is empty, take the page, component, mockup, or URL from the conversation. Ask only when
+If none were given, take the page, component, mockup, or URL from the conversation. Ask only when
 neither names a surface.
 
 The bundled scripts need Node 18 or later and no packages. Both print usage with `-h` or `--help`
@@ -78,7 +78,8 @@ like) in a monorepo. Then read two or three existing screens closest to the one 
 they show the system as practiced.
 
 Copy-ready discovery commands and the signals that identify each stack are in
-`references/token-formats.md` (sections 1 and 2). Measure rather than guess which mode applies:
+`references/token-formats.md` (sections 1 and 2). Measure rather than guess which mode applies.
+`${CLAUDE_SKILL_DIR}` stands for this skill's folder, the directory that contains this SKILL.md. Claude Code fills it in; in other tools, use that folder's path.
 
 ```bash
 node "${CLAUDE_SKILL_DIR}/scripts/scan-hardcoded.mjs" . --show 0
@@ -288,9 +289,10 @@ Run the checks, look at the output, fix, and run them again. Impressions are not
 3. **Screenshots**: when a browser can run, capture 320, 768, and 1280 px wide (plus a wide size for
    dashboards) in light and dark, with the key states (focus on the primary control, error, empty,
    loading). 320 is the width WCAG 1.4.10 requires content to reflow at, which is why it replaces the
-   375 default of the browser-testing smoke script here. When both skills come from the `frontend`
-   plugin, that script sits in the sibling skill's folder, next to this one. Check it is there
-   first; it is missing when this skill was copied on its own:
+   375 default of the browser-testing smoke script here. When browser-testing is installed next to
+   this skill (both from the `frontend` plugin, or both installed into the same skills folder, as
+   `npx skills add` does), that script sits in the sibling skill's folder. Check it is there first;
+   it is missing when this skill was installed on its own:
 
    ```bash
    test -f "$(dirname "${CLAUDE_SKILL_DIR}")/browser-testing/scripts/page-smoke.mjs" && echo found
@@ -383,7 +385,7 @@ Assumptions: <anything not confirmed by the user, including values marked approx
 - `frontend:accessibility-review` for the full WCAG audit after the visual checks here.
 - `review-suite:pr-review` to review someone else's restyle on a branch or PR.
 
-If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
+Skills are named here as `plugin:skill`; an agent that lists skills by bare name knows each one by the part after the colon (`review-suite:pr-review` is `pr-review`). If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
 
 ## Reference files
 

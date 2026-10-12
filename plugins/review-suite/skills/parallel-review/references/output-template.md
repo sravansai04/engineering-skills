@@ -53,6 +53,7 @@ Fill this in for step 9. Put it in the chat by default. Only write it to a file 
 - **Not checked statically:** [runtime-only concerns, e.g. "actual query plans", "screen-reader behavior", "load under production traffic"]
 - **Assumptions:** [e.g. "assumed the orders table is large; no scale was given"]
 - **Slices:** [for sliced runs, which persona saw which slice, and how many waves ran]
+- **How lanes ran:** [e.g. "parallel subagents, 1 wave" / "sequentially in one session (no subagents available), so personas and verifiers were less independent than separate reviewers"]
 - **Trust and execution:** [e.g. "fork PR: no project commands run, verification by reading only" / "ran the unit tests for src/orders/ in a worktree"]
 - **Untracked files included:** [for working-tree targets: new files that have no history]
 

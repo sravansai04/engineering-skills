@@ -390,7 +390,7 @@ Notes: excluded .env.local (contains credentials); issue #482 will close on merg
 - `implementation:verify-before-done` runs the full checks before work is called done.
 - `workflow:ci-failure-triage` when a commit-message lint or other check fails in CI.
 
-If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
+Skills are named here as `plugin:skill`; an agent that lists skills by bare name knows each one by the part after the colon (`review-suite:pr-review` is `pr-review`). If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
 
 ## Reference files
 

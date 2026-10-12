@@ -7,21 +7,33 @@ shadow a standard-library module:
 
     python3 -I scripts/validate_skills.py            # validate the repo
     python3 -I scripts/validate_skills.py --root DIR # validate another checkout
-    python3 -I scripts/validate_skills.py --selftest # check the YAML subset parser
+    python3 -I scripts/validate_skills.py --selftest # check the parser, patterns and portability rules
 
 What it checks
 --------------
 For every plugins/<plugin>/skills/<skill>/SKILL.md:
   * the file starts with a YAML frontmatter block that parses;
-  * only known frontmatter keys are used, with values of the right shape;
-  * `name` equals the directory name and matches ^[a-z0-9-]{1,64}$;
-  * `description` is present and at most 1024 characters, holds no XML-like
-    tag such as <name> (the open skill format rejects them), and together with
-    `when_to_use` stays within 1536 characters;
+  * the frontmatter uses only the fields of the open Agent Skills standard
+    (agentskills.io): name, description, license, compatibility, metadata and
+    allowed-tools, with values of the right shape. Claude Code-only fields such
+    as argument-hint fail, because the reference validator (skills-ref) and
+    other agents reject or ignore them;
+  * `name` equals the directory name and matches ^[a-z0-9]+(-[a-z0-9]+)*$ in
+    at most 64 characters (no leading, trailing or doubled hyphen);
+  * `description` is present and at most 1024 characters, and holds no
+    XML-like tag such as <name> (the open skill format rejects them);
   * the SKILL.md body holds no unescaped $0-$9: Claude Code replaces them with
     the skill's positional arguments, so a SQL or shell example using them is
     corrupted when the skill runs with arguments (write a backslash before the
     dollar sign for a literal);
+  * neither SKILL.md nor any file under references/ holds Claude Code's
+    arguments placeholder (a dollar sign followed by ARGUMENTS, with or without
+    an [N] index): other agents show it as literal text, and Claude Code
+    appends the arguments after "ARGUMENTS:" by itself when a skill has none;
+  * when ${CLAUDE_SKILL_DIR} appears in SKILL.md (outside allowed-tools) or in
+    a file under references/, scripts/ or assets/, the SKILL.md body carries
+    the sentence that explains the variable to agents that do not fill it in
+    (SKILL_DIR_SENTENCE below);
   * every relative Markdown link, every backticked references/, scripts/ or
     assets/ path and every ${CLAUDE_SKILL_DIR}/... path resolves, and none of
     them escapes the skill directory;
@@ -67,7 +79,9 @@ import fnmatch
 import json
 import os
 import re
+import shutil
 import sys
+import tempfile
 import traceback
 
 # ---------------------------------------------------------------------------
@@ -85,11 +99,12 @@ DENYLIST_ENV = "SKILLS_DENYLIST_FILE"
 DENYLIST_REPO_FILE = ".denylist.local"
 DENYLIST_USER_FILE = os.path.join("~", ".config", "engineering-skills", "denylist.txt")
 
-NAME_RE = re.compile(r"^[a-z0-9-]{1,64}$")
+# Skill names follow the Agent Skills standard: lowercase letters and digits
+# in hyphen-separated runs (no leading, trailing or doubled hyphen).
 KEBAB_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+MAX_NAME = 64
 MAX_DESCRIPTION = 1024
 RECOMMENDED_DESCRIPTION = 500  # warn above this; the listing budget is shared
-MAX_DESCRIPTION_PLUS_WHEN = 1536
 MAX_COMPATIBILITY = 500
 MAX_SKILL_LINES = 500  # SKILL.md must stay strictly under this
 MIN_EXPECTATIONS, MAX_EXPECTATIONS = 3, 6  # per behavior eval (a warning outside)
@@ -104,32 +119,37 @@ SHELL_FENCE_INFOS = {"bash", "sh", "shell", "zsh", "console", "terminal"}
 SKILL_DIR_NOTE = "not a shell variable"
 # allowed-tools rules that mean the skill reads PR or CI text.
 READS_PR_OR_CI_RE = re.compile(r"Bash\(\s*gh\s+(?:pr\s+(?:view|diff|checks)|run\s+(?:view|list))\b")
+# Claude Code's arguments placeholder, bare or indexed. Claude Code is the only
+# agent that substitutes it; everywhere else it reaches the model as literal
+# text. Without it, Claude Code appends "ARGUMENTS: <input>" to the skill on its
+# own, so a skill refers to "the arguments" in words instead. The [$] class
+# keeps this file from containing the placeholder itself.
+ARGS_PLACEHOLDER_RE = re.compile(r"[$]ARGUMENTS(?:\[[0-9]+\])?")
 
-BOOL_WORDS = {"true", "false", "yes", "no", "on", "off", "1", "0"}
+# Claude Code fills in ${CLAUDE_SKILL_DIR} (the skill's absolute folder) in
+# SKILL.md and its allowed-tools; other agents leave it as written. A skill that
+# uses it explains it once in the SKILL.md body with exactly this sentence, which
+# may wrap across lines.
+SKILL_DIR_VAR = "${CLAUDE_SKILL_DIR}"
+SKILL_DIR_SENTENCE = (
+    "`" + SKILL_DIR_VAR + "` stands for this skill's folder, the directory that contains this SKILL.md. "
+    "Claude Code fills it in; in other tools, use that folder's path."
+)
+SKILL_DIR_SENTENCE_RE = re.compile(r"\s+".join(re.escape(word) for word in SKILL_DIR_SENTENCE.split()))
 
-# key -> expected shape. "str", "bool", "str|list", "map", or a set of
-# allowed string values.
+# The top-level frontmatter fields of the open Agent Skills standard
+# (agentskills.io/specification), the same set the reference validator
+# (skills-ref) accepts. Claude Code reads more (argument-hint, when_to_use,
+# disable-model-invocation, ...), but skills-ref rejects them and other agents
+# ignore them, so a skill here carries their intent in the body instead.
+# key -> expected shape: "str", "str|list", or "map" (string keys and values).
 FRONTMATTER_KEYS = {
     "name": "str",
     "description": "str",
-    "when_to_use": "str",
-    "argument-hint": "str",
-    "arguments": "str|list",
-    "disable-model-invocation": "bool",
-    "user-invocable": "bool",
-    "allowed-tools": "str|list",
-    "disallowed-tools": "str|list",
-    "model": "str",
-    "effort": {"low", "medium", "high", "xhigh", "max"},
-    "context": {"fork"},
-    "agent": "str",
-    "background": "bool",
-    "hooks": "map",
-    "paths": "str|list",
-    "shell": {"bash", "powershell"},
-    "metadata": "map",
     "license": "str",
     "compatibility": "str",
+    "metadata": "map",
+    "allowed-tools": "str|list",
 }
 
 SKIP_DIRS = {".git", "__pycache__", "node_modules", ".venv", "venv", ".idea", ".vscode"}
@@ -670,21 +690,19 @@ def check_value_shape(report, path, key, value, shape, line):
     if shape == "str":
         if not is_str(value):
             report.error(path, "frontmatter %r must be a string" % key, line)
-    elif shape == "bool":
-        if not is_str(value) or value.strip().lower() not in BOOL_WORDS:
-            report.error(path, "frontmatter %r must be a boolean (true/false), got %r" % (key, value), line)
     elif shape == "str|list":
         ok = is_str(value) or (isinstance(value, list) and all(is_str(v) and v.strip() for v in value))
         if not ok:
             report.error(path, "frontmatter %r must be a string or a list of strings" % key, line)
     elif shape == "map":
+        # The standard defines metadata as a map of string keys to string values.
         if not isinstance(value, dict):
             report.error(path, "frontmatter %r must be a mapping" % key, line)
-    elif isinstance(shape, set):
-        if not is_str(value) or value.strip() not in shape:
-            report.error(
-                path, "frontmatter %r must be one of %s, got %r" % (key, ", ".join(sorted(shape)), value), line
-            )
+        else:
+            for sub, val in value.items():
+                if not is_str(val):
+                    report.error(path, "frontmatter %r: the value of %r must be a string, not a nested list or map"
+                                 % (key, sub), line)
 
 
 def resolve_resource(report, skill_dir, skill_md, ref, line, origin):
@@ -772,6 +790,7 @@ def check_skill(report, skill_dir):
         check_frontmatter(report, skill_md, dir_name, yaml_text, fm)
         check_untrusted_input(report, skill_dir, skill_md, fm)
     check_skill_body(report, skill_dir, skill_md, text, body, body_start)
+    check_portability(report, skill_dir, skill_md, text, fm, body)
     check_evals(report, skill_dir)
 
 
@@ -841,8 +860,22 @@ def check_frontmatter(report, skill_md, dir_name, yaml_text, fm):
 
     for key, value in fm.items():
         line = key_lines.get(key)
+        if key == "argument-hint":
+            report.error(
+                skill_md,
+                "'argument-hint' is a Claude Code autocomplete hint, not an Agent Skills field, and the reference "
+                "validator rejects it; describe the arguments the skill takes in its body instead",
+                line,
+            )
+            continue
         if key not in FRONTMATTER_KEYS:
-            report.error(skill_md, "unknown frontmatter key %r" % key, line)
+            report.error(
+                skill_md,
+                "unknown frontmatter key %r; the Agent Skills standard allows only %s (Claude Code-only fields fail "
+                "the reference validator and other agents ignore them, so carry their intent in the body)"
+                % (key, ", ".join(FRONTMATTER_KEYS)),
+                line,
+            )
             continue
         check_value_shape(report, skill_md, key, value, FRONTMATTER_KEYS[key], line)
 
@@ -850,8 +883,13 @@ def check_frontmatter(report, skill_md, dir_name, yaml_text, fm):
     if name is None:
         report.error(skill_md, "frontmatter is missing 'name'")
     elif isinstance(name, str):
-        if not NAME_RE.match(name):
-            report.error(skill_md, "name %r must match ^[a-z0-9-]{1,64}$" % name, key_lines.get("name"))
+        if len(name) > MAX_NAME or not KEBAB_RE.match(name):
+            report.error(
+                skill_md,
+                "name %r must be lowercase letters and digits in hyphen-separated runs (no leading, trailing or "
+                "doubled hyphen), at most %d characters" % (name, MAX_NAME),
+                key_lines.get("name"),
+            )
         if name != dir_name:
             report.error(
                 skill_md, "name %r does not match its directory %r" % (name, dir_name), key_lines.get("name")
@@ -881,14 +919,6 @@ def check_frontmatter(report, skill_md, dir_name, yaml_text, fm):
                 "description contains an XML-like tag %r; reword placeholders such as <name>" % tag.group(0),
                 key_lines.get("description"),
             )
-        when = fm.get("when_to_use")
-        if isinstance(when, str) and len(desc) + len(when) > MAX_DESCRIPTION_PLUS_WHEN:
-            report.error(
-                skill_md,
-                "description + when_to_use is %d characters; the limit is %d"
-                % (len(desc) + len(when), MAX_DESCRIPTION_PLUS_WHEN),
-                key_lines.get("when_to_use"),
-            )
     compat = fm.get("compatibility")
     if isinstance(compat, str) and len(compat) > MAX_COMPATIBILITY:
         report.error(
@@ -906,10 +936,68 @@ def check_positional_args(report, skill_md, body, body_start):
             report.error(
                 skill_md,
                 "%r is replaced by a positional skill argument when the skill runs with arguments; "
-                "write \\%s for a literal, $ARGUMENTS[N] for the argument, or move the example to a reference file"
+                "write \\%s for a literal, refer to the arguments in words, or move the example to a reference file"
                 % (m.group(0), m.group(0)),
                 lineno,
             )
+
+
+def read_resource_texts(skill_dir, subdirs):
+    """Return (path, text) for every readable text file under the given subfolders."""
+    found = []
+    for sub in subdirs:
+        base = os.path.join(skill_dir, sub)
+        if not os.path.isdir(base):
+            continue
+        for path in list_files(base):
+            try:
+                with open(path, "rb") as fh:
+                    data = fh.read()
+            except OSError:
+                continue
+            if b"\0" not in data[:8192]:
+                found.append((path, data.decode("utf-8", errors="replace")))
+    return found
+
+
+def check_portability(report, skill_dir, skill_md, text, fm, body):
+    """Keep a skill usable by agents other than Claude Code.
+
+    * No arguments placeholder in SKILL.md or references/: only Claude Code
+      substitutes it, and it appends the arguments itself when there is none.
+    * ${CLAUDE_SKILL_DIR} used in SKILL.md (allowed-tools aside, since only
+      Claude Code reads that field) or in references/, scripts/ or assets/
+      needs SKILL_DIR_SENTENCE in the SKILL.md body. evals/ is left out: it is
+      test material for maintainers, and its fixtures may be skills of their own.
+    """
+    for path, content in [(skill_md, text)] + read_resource_texts(skill_dir, ("references",)):
+        for lineno, line in enumerate(content.split("\n"), 1):
+            for m in ARGS_PLACEHOLDER_RE.finditer(line):
+                report.error(
+                    path,
+                    "%r is Claude Code's arguments placeholder; other agents show it as literal text. Refer to "
+                    "\"the arguments\" in words: with no placeholder, Claude Code appends them after \"ARGUMENTS:\""
+                    % m.group(0),
+                    lineno,
+                )
+
+    users = []
+    if SKILL_DIR_VAR in body:
+        users.append("SKILL.md")
+    elif isinstance(fm, dict) and any(
+        SKILL_DIR_VAR in str(value) for key, value in fm.items() if key != "allowed-tools"
+    ):
+        users.append("SKILL.md frontmatter")
+    for path, content in read_resource_texts(skill_dir, RESOURCE_DIRS):
+        if SKILL_DIR_VAR in content:
+            users.append(os.path.relpath(path, skill_dir).replace(os.sep, "/"))
+    if users and not SKILL_DIR_SENTENCE_RE.search(body):
+        shown = ", ".join(users[:3]) + (", ..." if len(users) > 3 else "")
+        report.error(
+            skill_md,
+            "%s is used (%s) but the SKILL.md body never explains it to agents that do not fill it in; add this "
+            "sentence once, just before its first use: %s" % (SKILL_DIR_VAR, shown, SKILL_DIR_SENTENCE),
+        )
 
 
 def check_reference_skill_dir(report, path, text):
@@ -1328,14 +1416,28 @@ def selftest():
             print("FAIL expected an error for %r, got %r" % (src, got))
         except YamlError:
             pass
-    # The pattern checks that guard skill content.
+    # The pattern checks that guard skill content. The arguments placeholder is
+    # built at run time so that this file never contains it.
+    args = "$" + "ARGUMENTS"
     pattern_cases = [
         (XML_TAG_RE, "Use for \"implement docs/plans/<name>.md\"", True),
         (XML_TAG_RE, "Not for a < b comparisons or a -> arrow", False),
         (POSITIONAL_ARG_RE, "WHERE id = $1 AND qty > 0", True),
         (POSITIONAL_ARG_RE, "= ANY($1::bigint[])", True),
         (POSITIONAL_ARG_RE, "write \\$1 for a literal", False),
-        (POSITIONAL_ARG_RE, "$ARGUMENTS and $ARGUMENTS[0] and $name", False),
+        (POSITIONAL_ARG_RE, args + " and " + args + "[0] and $name", False),
+        (ARGS_PLACEHOLDER_RE, "Review " + args + " now", True),
+        (ARGS_PLACEHOLDER_RE, "the first one, " + args + "[0]", True),
+        (ARGS_PLACEHOLDER_RE, "Claude Code appends them after ARGUMENTS:", False),
+        (ARGS_PLACEHOLDER_RE, "$ARGS and $ARGUMENT_LIST are other names", False),
+        (SKILL_DIR_SENTENCE_RE, SKILL_DIR_SENTENCE, True),
+        (SKILL_DIR_SENTENCE_RE, SKILL_DIR_SENTENCE.replace(" the directory", "\n  the directory"), True),
+        (SKILL_DIR_SENTENCE_RE, "`" + SKILL_DIR_VAR + "` is the skill folder.", False),
+        (KEBAB_RE, "pr-review", True),
+        (KEBAB_RE, "-pr-review", False),
+        (KEBAB_RE, "pr--review", False),
+        (KEBAB_RE, "pr-review-", False),
+        (KEBAB_RE, "PR-Review", False),
         (READS_PR_OR_CI_RE, "Bash(git diff:*), Bash(gh pr view:*)", True),
         (READS_PR_OR_CI_RE, "Bash(gh run list:*)", True),
         (READS_PR_OR_CI_RE, "Bash(gh issue view:*), Bash(gh repo view:*)", False),
@@ -1344,9 +1446,89 @@ def selftest():
         if bool(regex.search(sample)) != want:
             failures += 1
             print("FAIL pattern %s on %r: want %s" % (regex.pattern, sample, want))
-    total = len(cases) + len(bad) + len(pattern_cases)
+    skill_failures, skill_total = selftest_skill_rules(args)
+    failures += skill_failures
+    total = len(cases) + len(bad) + len(pattern_cases) + skill_total
     print("selftest: %d/%d passed" % (total - failures, total))
     return 1 if failures else 0
+
+
+def selftest_skill_rules(args):
+    """Run check_skill on throwaway skills to prove each portability rule fires.
+
+    Each case is (label, frontmatter lines, body, extra files, message
+    fragment, whether an error with that fragment is expected). Only errors
+    containing the fragment count, so unrelated findings on these minimal
+    skills (no evals, unmentioned references) do not matter.
+    """
+    var = SKILL_DIR_VAR
+    sentence = SKILL_DIR_SENTENCE
+    spec_fm = (
+        "name: demo-skill\n"
+        "description: \"Does a demo thing. Use for a demo request.\"\n"
+        "license: MIT\n"
+        "compatibility: Needs python3.\n"
+        "metadata:\n  author: example\n  version: \"1.0\"\n"
+        "allowed-tools: Bash(git diff:*), Read\n"
+    )
+    base_fm = "name: demo-skill\ndescription: d\n"
+    unknown = "unknown frontmatter key"
+    placeholder = "arguments placeholder"
+    explain = "never explains it"
+    cases = [
+        ("spec fields only", spec_fm, "Body.\n", {}, "frontmatter", False),
+        ("argument-hint fails", base_fm + "argument-hint: \"[target]\"\n", "Body.\n", {}, "'argument-hint' is", True),
+        ("when_to_use fails", base_fm + "when_to_use: \"Use for x.\"\n", "Body.\n", {}, unknown, True),
+        ("disable-model-invocation fails", base_fm + "disable-model-invocation: true\n", "Body.\n", {}, unknown, True),
+        ("nested metadata fails", base_fm + "metadata:\n  tags:\n    - a\n", "Body.\n", {}, "must be a string", True),
+        ("doubled hyphen in name fails", "name: demo--skill\ndescription: d\n", "Body.\n", {}, "hyphen-separated", True),
+        ("placeholder in SKILL.md fails", base_fm, "Review " + args + ".\n", {}, placeholder, True),
+        ("indexed placeholder in references fails", base_fm, "See references/r.md.\n",
+         {"references/r.md": "Use " + args + "[0] here.\n"}, placeholder, True),
+        ("arguments in words pass", base_fm, "Review the arguments (after ARGUMENTS: in Claude Code).\n", {},
+         placeholder, False),
+        ("positional advice names no placeholder", base_fm, "WHERE id = $1\n", {}, args, False),
+        ("skill-dir var without the sentence fails", base_fm, "Run `\"" + var + "/scripts/x.sh\"`.\n",
+         {"scripts/x.sh": "#!/bin/sh\n"}, explain, True),
+        ("skill-dir var with a wrapped sentence passes", base_fm,
+         sentence.replace(" Claude Code", "\nClaude Code") + "\nRun `\"" + var + "/scripts/x.sh\"`.\n",
+         {"scripts/x.sh": "#!/bin/sh\n"}, explain, False),
+        ("skill-dir var only in allowed-tools passes",
+         base_fm + "allowed-tools: Bash(" + var + "/scripts/x.sh:*)\n", "Body.\n",
+         {"scripts/x.sh": "#!/bin/sh\n"}, explain, False),
+        ("skill-dir var only in a reference fails", base_fm, "See references/r.md.\n",
+         {"references/r.md": "Run `" + var + "/scripts/x.sh` (not a shell variable).\n"}, explain, True),
+        ("skill-dir var only in a script fails", base_fm, "Body.\n",
+         {"scripts/x.sh": "#!/bin/sh\necho \"" + var + "\"\n"}, explain, True),
+        ("skill-dir var in another frontmatter field fails",
+         base_fm + "compatibility: Runs " + var + "/scripts/x.sh with sh.\n", "Body.\n",
+         {"scripts/x.sh": "#!/bin/sh\n"}, explain, True),
+        ("skill-dir var only in an eval fixture passes", base_fm, "Body.\n",
+         {"evals/files/other/SKILL.md": "Run " + var + "/x.sh\n"}, explain, False),
+    ]
+    failures = 0
+    tmp = tempfile.mkdtemp(prefix="validate-skills-selftest-")
+    try:
+        for idx, (label, fm_text, body, files, fragment, want) in enumerate(cases):
+            skill_dir = os.path.join(tmp, "case-%d" % idx, "demo-skill")
+            os.makedirs(skill_dir)
+            with open(os.path.join(skill_dir, "SKILL.md"), "w", encoding="utf-8") as fh:
+                fh.write("---\n" + fm_text + "---\n\n" + body)
+            for rel, content in files.items():
+                path = os.path.join(skill_dir, *rel.split("/"))
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+                with open(path, "w", encoding="utf-8") as fh:
+                    fh.write(content)
+            report = Report(skill_dir)
+            check_skill(report, skill_dir)
+            hits = [msg for _path, _line, msg in report.errors if fragment in msg]
+            if bool(hits) != want:
+                failures += 1
+                print("FAIL skill rule %r: want %s error containing %r, got %r"
+                      % (label, "an" if want else "no", fragment, hits or [m for _p, _l, m in report.errors]))
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    return failures, len(cases)
 
 
 # ---------------------------------------------------------------------------

@@ -1,7 +1,6 @@
 ---
 name: pr-description
 description: 'Writes or refreshes a PR title and description from the real diff and commits (problem, grouped changes, honest testing, risk, reviewer guide), fills the repo''s template, and can open or update the PR with gh. Also writes release notes and changelog entries for a tag or commit range. Use for "open a PR", "write a PR description", "write release notes", "add a changelog entry". Not for commit messages (commit-message), reviewing a PR (pr-review), or replying to reviewers (respond-to-review).'
-argument-hint: '[PR number or URL to update | base branch | tag or commit range for release notes]'
 allowed-tools: Bash(git status:*), Bash(git branch --show-current), Bash(git remote -v), Bash(git log:*), Bash(git diff:*), Bash(git fetch:*), Bash(git rev-parse:*), Bash(git config --get:*), Bash(git ls-files:*), Bash(git describe:*), Bash(git tag --list:*), Bash(gh pr view:*), Bash(gh pr list:*), Bash(gh pr diff:*), Bash(gh pr checks:*), Bash(gh repo view:*), Bash(gh issue view:*)
 ---
 
@@ -9,7 +8,7 @@ allowed-tools: Bash(git status:*), Bash(git branch --show-current), Bash(git rem
 
 A pull request description has two readers. The reviewer today needs to know what changed, why, where to look hardest, and what could break. The engineer running `git blame` a year from now needs the why. Build the description from the branch's actual diff and history rather than from memory, size it to the change, and claim only what the evidence supports. An invented "tested locally" is worse than an honest "not tested", because reviewers decide how hard to look based on it.
 
-Only inspection commands and `git fetch` are pre-approved. Pushing, `gh pr create`, `gh pr edit` and `gh api` always prompt, so the user sees and approves anything that changes the remote.
+Only inspection commands and `git fetch` are pre-approved. Pushing, `gh pr create`, `gh pr edit` and `gh api` change the remote, so run them only in Create or Update mode. Unless the user's request explicitly said to open or update the PR (a bare PR number is not such a request), show the final title, body and target branch first and wait for a go-ahead. Claude Code also prompts before these commands; other agents may run them without asking.
 
 ## Pick the mode first
 
@@ -20,9 +19,9 @@ Only inspection commands and `git fetch` are pre-approved. Pushing, `gh pr creat
 | Update | "update / refresh the PR description", a PR number or URL is given, or the branch has an open PR and the user asked to refresh it | `gh pr edit` |
 | Release notes | "write release notes", "add a changelog entry", "what changed since v2.3", or a tag or commit range | None by default; edit the changelog file only when asked (see "Release notes and changelog entries") |
 
-Skill argument, if any: $ARGUMENTS
+Skill arguments, if any: what the user passed when invoking this skill (in Claude Code, typed arguments appear after ARGUMENTS: at the end of this skill).
 
-A number or PR URL in that argument names the PR to update. A tag or commit range (`v2.3.0..v2.4.0`) asks for release notes. Anything else is the base branch. When the request is ambiguous, draft and offer to create. Opening a PR notifies people and can trigger CI and deploy previews, so do it only when asked.
+A number or PR URL in the arguments or the user's message names the PR to update. A tag or commit range (`v2.3.0..v2.4.0`) asks for release notes. Any other argument is the base branch. When the request is ambiguous, draft and offer to create. Opening a PR notifies people and can trigger CI and deploy previews, so do it only when asked.
 
 ## Workflow
 
@@ -172,7 +171,7 @@ Use this default order. What belongs in each section, and a fill-in skeleton, ar
 
 ### 8. Create or update the PR (only when asked)
 
-Re-run the branch guard from step 1 just before pushing. Push with an explicit refspec, so the approval prompt names the branch the commits will land on:
+Re-run the branch guard from step 1 just before pushing. Push with an explicit refspec, so the command, and Claude Code's approval prompt, name the branch the commits will land on:
 
 ```bash
 git push -u origin "HEAD:refs/heads/<branch>"
@@ -253,7 +252,7 @@ When the body itself contains triple-backtick code blocks, wrap it in a four-bac
 - `review-suite:pr-review` reviews a PR. This skill writes one.
 - `workflow:respond-to-review` works through the review comments once the PR is open.
 
-If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
+Skills are named here as `plugin:skill`; an agent that lists skills by bare name knows each one by the part after the colon (`review-suite:pr-review` is `pr-review`). If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
 
 ## Reference files
 

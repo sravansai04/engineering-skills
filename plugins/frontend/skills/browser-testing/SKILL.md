@@ -1,7 +1,6 @@
 ---
 name: browser-testing
 description: "Verifies web UI changes in a real browser with evidence (console, network, screenshots at phone to desktop widths) and writes, fixes, or de-flakes end-to-end tests, Playwright by default. Use for \"check it in the browser\", \"test it at mobile width\", \"write an e2e test\", \"this e2e test is flaky\", or \"read this Playwright trace\". Not for unit or component tests (tdd), WCAG audits (accessibility-review), visual design (ui-design-direction), or red CI runs (ci-failure-triage)."
-argument-hint: "[URL, flow to check, or e2e spec file]"
 compatibility: The bundled smoke test needs Node.js and Playwright, resolved from the project or a scratch directory. A Playwright or Chrome DevTools MCP server is used when connected, and is optional.
 ---
 
@@ -14,7 +13,7 @@ Two jobs share one discipline:
 
 The discipline: act on the page the way a user does (roles, labels, visible text), wait for outcomes instead of clocks, and never claim something works without evidence you captured yourself.
 
-The target is `$ARGUMENTS`: a URL, a flow to check, or a spec file. If it is empty, take the target from the conversation.
+The target is the skill's arguments, what the user passed when invoking this skill (in Claude Code, typed arguments appear after ARGUMENTS: at the end of this skill): a URL, a flow to check, or a spec file. If none were given, take the target from the conversation.
 
 ## Workflow
 
@@ -82,7 +81,7 @@ Look at the tools you actually have; do not assume one. Browser automation usual
 
 Chrome DevTools MCP adds performance traces, Lighthouse, and computed-style inspection. Playwright MCP adds Firefox and WebKit, and opt-in tool groups behind `--caps` (`network`, `storage`, `testing`, `devtools`, `pdf`, `vision`, `config`). A misspelled cap is ignored without an error, so confirm by checking the tool list after a restart. If several browser servers are connected, prefer one with a clean or isolated profile: a server attached to someone's everyday browser acts *as that person*.
 
-**No browser MCP?** Use the CLI ladder (commands and templates in `references/browser-drivers.md`):
+**No browser MCP?** Use the CLI ladder (commands and templates in `references/browser-drivers.md`). `${CLAUDE_SKILL_DIR}` stands for this skill's folder, the directory that contains this SKILL.md. Claude Code fills it in; in other tools, use that folder's path.
 
 1. `node "${CLAUDE_SKILL_DIR}/scripts/page-smoke.mjs" <url>`, run from a directory where Playwright is installed. It loads the page at 375/768/1280 px and prints JSON with console errors, uncaught exceptions, failed and 4xx/5xx requests, horizontal overflow with the elements where it starts (as CSS selectors), and screenshot paths. Exit code 0 clean, 1 problems, 2 could not run or the URL never loaded. Run it, do not read it.
 2. If `npx playwright --help` lists `cli` (1.62 and later), drive the flow from the terminal with no code: `npx playwright cli open <url>`, `snapshot`, `click <ref>`, `fill <ref> <text>`, `console`, `requests`, `resize <w> <h>`, `screenshot`, then `close`. It is headless by default and keeps the browser alive between commands, so always `close` it. Run it from a scratch directory: it writes snapshots and logs to `./.playwright-cli/`.
@@ -245,7 +244,7 @@ Follow-ups: <gaps, quarantined tests with linked issues, data or setup the suite
 - `implementation:verify-before-done` decides *whether* a change needs evidence; this skill is *how* to get it for a web UI.
 - `review-suite:pr-review` for reviewing a PR that changes UI or e2e specs. Run Mode A here when that review needs live browser evidence.
 
-If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
+Skills are named here as `plugin:skill`; an agent that lists skills by bare name knows each one by the part after the colon (`review-suite:pr-review` is `pr-review`). If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
 
 ## Reference files
 

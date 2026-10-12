@@ -1,7 +1,6 @@
 ---
 name: api-design
 description: "Designs and reviews API contracts: REST first, plus GraphQL, gRPC, webhooks, and event or message schemas. Covers resources, status codes, errors, pagination, concurrency, retry-safe writes, versioning, and deprecation. Use for \"design an API for\", \"what status code should this return\", \"is this API change breaking\", \"make this POST safe to retry\". Not for a slow endpoint (performance-review), its SQL (query-review), migrations (db-migration-safety), or a library's API (docs-lookup)."
-argument-hint: "[spec file, endpoint, PR or diff, capability to design, or a single API question]"
 allowed-tools: Bash(gh pr view:*), Bash(gh pr diff:*), Bash(gh repo view:*), Bash(git fetch:*), Bash(git diff:*), Bash(git show:*), Bash(git log:*), Bash(git grep:*), Bash(git merge-base:*), Bash(git symbolic-ref:*), Bash(git ls-files:*), Read, Grep, Glob
 ---
 
@@ -13,7 +12,7 @@ An API contract outlives the code behind it. Once a client depends on a field na
 - **Review mode**: a contract change (spec diff, PR, or handler code) → a report that asks "does this break an existing client?" first.
 - **Advise mode**: one focused question (a status code, a pagination style, retry safety, a versioning choice) → a short recommendation.
 
-Input: `$ARGUMENTS` (may be empty). A spec, diff, PR, or existing endpoint to check means review mode; something to build means design mode; a question about one decision means advise mode. If it's empty, infer from the conversation. Ask only when two readings are plausible and lead to different work.
+Input: the skill's arguments, meaning what the user passed when invoking this skill (in Claude Code, typed arguments appear after ARGUMENTS: at the end of this skill). They may be empty. A spec, diff, PR, or existing endpoint to check means review mode; something to build means design mode; a question about one decision means advise mode. If there are none, infer from the conversation. Ask only when two readings are plausible and lead to different work.
 
 ## Workflow
 
@@ -44,7 +43,7 @@ An API that is consistent with itself serves clients better than one where each 
 5. **Decide every cross-cutting behavior now** with the design checklist below. "We'll add pagination later" becomes a breaking change later.
 6. **Write the contract first**: OpenAPI, `.proto`, or GraphQL SDL, matching the project. OpenAPI 3.1 works; 3.2 (September 2025) is current and is the first version that can describe the QUERY method, so confirm the project's linter, differ, and code generator support it before choosing it. Give every operation a success example and at least one error example, and run the project's linter.
 7. **Keep the code conformant.** Generate server types or stubs from the spec, or validate requests and responses against it in integration tests (request-validation middleware, response-schema assertions). Optionally run property-based contract tests against a running server, such as Schemathesis for OpenAPI. A spec the code has drifted from turns every downstream check into false assurance.
-8. **Write the design doc** from the template, adjusting the destination to the project's docs location (ask if there's no obvious one), then fill it in and delete sections that don't apply:
+8. **Write the design doc** from the template, adjusting the destination to the project's docs location (ask if there's no obvious one), then fill it in and delete sections that don't apply. `${CLAUDE_SKILL_DIR}` stands for this skill's folder, the directory that contains this SKILL.md. Claude Code fills it in; in other tools, use that folder's path.
    ```bash
    mkdir -p docs/api && cp "${CLAUDE_SKILL_DIR}/assets/design-doc-template.md" docs/api/{name}.md
    ```
@@ -85,7 +84,7 @@ For an untrusted target, run nothing from it unless the user vouches for the aut
    git show "$HEAD_SHA:path/to/openapi.yaml"     # read the head version, not the working tree
    BASE_SPEC=$(mktemp) && git show "$MB":path/to/openapi.yaml > "$BASE_SPEC"
    ```
-   Read, Grep, and Glob see the working tree, which is usually not the PR, so read PR files with `git show "$HEAD_SHA:path"`. For code-first, build each spec without touching the user's checkout: `WT=$(mktemp -d) && git worktree add --detach "$WT" "$MB"`, run the generator there (dependencies may need installing; only after the trust gate above), then `git worktree remove --force "$WT"`. With no generator, review the route, DTO, serializer, and validation changes directly.
+   File-reading and search tools (Read, Grep, and Glob in Claude Code) see the working tree, which is usually not the PR, so read PR files with `git show "$HEAD_SHA:path"`. For code-first, build each spec without touching the user's checkout: `WT=$(mktemp -d) && git worktree add --detach "$WT" "$MB"`, run the generator there (dependencies may need installing; only after the trust gate above), then `git worktree remove --force "$WT"`. With no generator, review the route, DTO, serializer, and validation changes directly.
 
 2. **Check for drift between contract and code.** In a spec-first project, a handler, DTO, validation, or serializer change with no matching spec change is a finding, and so is a spec change with no matching code. Otherwise a clean diff of an unchanged spec hides a real contract change.
 3. **Run machine checks**: the project's own lint and breaking-change commands first. Fallbacks for OpenAPI, protobuf, and GraphQL, and the severity file that makes oasdiff fail on changed defaults, are in `references/breaking-change-checklist.md`, section 4. Each fallback downloads a tool, so ask before running one that isn't already a project dependency.
@@ -263,7 +262,7 @@ Each finding names the operation and field, says what goes wrong for whom, and g
 - `implementation:tdd` to build the contract test-first from its examples.
 - `implementation:docs-lookup` to check how the project's framework, OpenAPI or protobuf tooling, or client library behaves at the version it pins (a serializer default, a validation rule, a generated client's retry behavior).
 
-If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
+Skills are named here as `plugin:skill`; an agent that lists skills by bare name knows each one by the part after the colon (`review-suite:pr-review` is `pr-review`). If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
 
 ## Reference files
 

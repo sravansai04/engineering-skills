@@ -4,9 +4,10 @@ Read this when the bug is a regression ("this used to work"), when you need to k
 why a line of code looks the way it does, or when you are about to run `git bisect`.
 
 The bundled scripts live in this skill's `scripts/` directory. `${CLAUDE_SKILL_DIR}`
-in the commands below is not a shell variable: replace it with the skill directory
-path shown under "Reference files" in SKILL.md. Run everything else from the
-repository (or the bisect worktree).
+in the commands below is not a shell variable: replace it with this skill's
+directory, the folder that contains SKILL.md (in Claude Code, the path SKILL.md
+shows for `scripts/`), and keep the quotes. Run everything else from the repository (or the
+bisect worktree).
 
 ## Contents
 1. Find what changed

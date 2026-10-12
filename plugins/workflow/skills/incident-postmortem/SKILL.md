@@ -1,9 +1,8 @@
 ---
 name: incident-postmortem
 description: "Writes and reviews blameless incident postmortems: a sourced UTC timeline, quantified impact, contributing factors, where you got lucky, and owned action items; also preps the review meeting. Use for \"write a postmortem\", \"write up yesterday's outage\", \"RCA for the SEV-1\", \"review this postmortem draft\", or a pasted incident log. Not for a live incident or a code-level bug (debug-root-cause), architecture decisions (adr-writer), or sprint retrospectives."
-argument-hint: "[incident ID, ticket or channel link, pasted log, or path to a draft to review]"
 # Read-only discovery plus the bundled linter. Cluster, cloud, and API
-# commands from the evidence guide still ask for permission.
+# commands from the evidence guide still ask for permission in Claude Code.
 allowed-tools: Bash(git ls-files:*), Bash(git grep:*), Bash(git log:*), Bash(gh pr list:*), Bash(gh run list:*), Bash(python3 -I ${CLAUDE_SKILL_DIR}/scripts/lint_postmortem.py:*), Bash(python3 -I "${CLAUDE_SKILL_DIR}/scripts/lint_postmortem.py":*)
 compatibility: The bundled linter needs Python 3.8 or later (standard library only).
 ---
@@ -20,9 +19,11 @@ the right move hard to see, never who to blame. This isn't only about being
 kind. People who expect blame hide information, and a postmortem without full
 information teaches nothing.
 
-The input is `$ARGUMENTS`: an incident ID, a link, a pasted channel log, a
-draft to review, or nothing. If it's empty, work from the conversation and ask
-for the incident's ticket or channel.
+The input is the skill's arguments
+(in Claude Code, typed arguments appear after ARGUMENTS: at the end of this skill):
+an incident ID, a link, a pasted channel log, a draft to review, or nothing. If
+none were given, work from the conversation and ask for the incident's ticket
+or channel.
 
 ## Workflow
 
@@ -273,7 +274,8 @@ Write the summary after everything else, in three to five sentences: what users
 experienced, for how long, how many were affected, the main factors in a line,
 and the state of the key fixes. Most readers stop there.
 
-Run the bundled linter on the draft:
+Run the bundled linter on the draft.
+`${CLAUDE_SKILL_DIR}` stands for this skill's folder, the directory that contains this SKILL.md. Claude Code fills it in; in other tools, use that folder's path.
 
 ```bash
 python3 -I "${CLAUDE_SKILL_DIR}/scripts/lint_postmortem.py" docs/postmortems/2026-03-14-checkout-failures.md
@@ -382,7 +384,7 @@ Report findings from most to least important, each with a concrete rewrite.
 - `workflow:pr-description` and `workflow:commit-message` cover the fix PRs, which should link the postmortem.
 - `workflow:ci-failure-triage` covers a red pipeline, which is not an incident.
 
-If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
+Skills are named here as `plugin:skill`; an agent that lists skills by bare name knows each one by the part after the colon (`review-suite:pr-review` is `pr-review`). If a skill named here isn't installed, give the short version inline and list the deeper pass as a follow-up.
 
 ## Reference files
 

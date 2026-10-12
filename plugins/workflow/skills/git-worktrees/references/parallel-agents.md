@@ -5,7 +5,8 @@ repository so they never touch each other's files, and how to bring the results
 back together.
 
 `${CLAUDE_SKILL_DIR}` in the commands below is not a shell variable: replace it
-with this skill's directory, the path SKILL.md shows for `scripts/`.
+with this skill's directory, the folder that contains SKILL.md (in Claude Code,
+the path SKILL.md shows for `scripts/`).
 
 ## Contents
 

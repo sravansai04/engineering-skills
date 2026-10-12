@@ -8,8 +8,8 @@ description: >-
   or "use subagents to implement this plan". Not for writing or critiquing a
   plan (plan-feature), criteria-only tickets (build-feature), or fuzzy ideas
   (brainstorm-spec).
-argument-hint: "[plan path, issue link, or task range such as T3-T6]"
 allowed-tools: Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git show:*), Bash(git rev-parse:*), Bash(git ls-files:*), Bash(git cherry:*), Bash(git stash list:*), Bash(git worktree list:*), Bash(git check-ignore:*), Bash(gh issue view:*), Read, Grep, Glob
+compatibility: Needs git. Subagent mode needs an agent that can run subagents (such as Claude Code's Agent tool or OpenCode's subagents); without them every task runs inline, one after another in one session, which is the default mode anyway.
 ---
 
 # Execute Plan
@@ -27,9 +27,10 @@ Every step below catches problems at the cheapest point: before starting (plan r
 inside each task (verification), between batches (checkpoints), and at the end
 (whole-change verification).
 
-Plan to execute: $ARGUMENTS
+Plan to execute: the skill's arguments
+(in Claude Code, typed arguments appear after ARGUMENTS: at the end of this skill).
 
-If `$ARGUMENTS` is empty, take the plan (a plan file, a spec's task list, an issue whose body
+If none were given, take the plan (a plan file, a spec's task list, an issue whose body
 lists ordered implementation steps, or numbered steps pasted in chat) and the task range from
 the conversation.
 
@@ -54,7 +55,8 @@ modules, is a plan: use this skill.
    "tasks 3-6"). If several plans could match "the plan", ask which one.
 2. **Execution mode.** Inline (you implement each task) is the default. Use subagent mode
    (step 8) when the user asks for it, or when the plan has many independent,
-   well-specified tasks and the harness offers a subagent tool.
+   well-specified tasks, and only if your agent can run subagents (such as Claude Code's
+   Agent tool or OpenCode's subagents).
 3. **Checkpoint cadence.** Do what the plan or user specifies ("pause after each phase",
    "check in after task 4"). If neither says, send a short report after every batch and
    keep going. Stop only when a stop condition fires.
@@ -295,6 +297,10 @@ ledger, reports). **Never delegate the judgment of whether a task is done.** Use
 independent, well-specified tasks, or a long plan that would crowd your context. Stay inline
 for coupled, exploratory or tiny tasks.
 
+This needs an agent that can run subagents, such as Claude Code's Agent tool or OpenCode's
+subagents. Without one, run the same tasks inline, one after another in this session, and
+say in every report that they ran sequentially rather than delegated.
+
 Read `references/subagent-mode.md` before the first dispatch. It has the mechanics, git
 commands, report handling and review rubric. The rules you cannot skip:
 
@@ -424,8 +430,9 @@ message have templates in `references/progress-report.md`. The run ends with thi
   `review-suite:pr-review` for an independent review of the finished branch, and
   `workflow:pr-description` once the user is ready to open a PR.
 
-If a skill named here isn't installed, give the short version inline and list the deeper
-pass as a follow-up.
+Skills are named here as `plugin:skill`; an agent that lists skills by bare name knows each
+one by the part after the colon (`review-suite:pr-review` is `pr-review`). If a skill named
+here isn't installed, give the short version inline and list the deeper pass as a follow-up.
 
 ## Reference files
 

@@ -9,7 +9,6 @@ description: >-
   security, performance or a11y deep-dives (secure-code-review,
   performance-review, accessibility-review), or many reviewers
   (parallel-review).
-argument-hint: "[pr-number | pr-url | branch | base...head]"
 allowed-tools: Bash(gh pr view:*), Bash(gh pr diff:*), Bash(gh pr checks:*), Bash(gh repo view:*), Bash(gh issue view:*), Bash(git fetch:*), Bash(git diff:*), Bash(git log:*), Bash(git show:*), Bash(git blame:*), Bash(git grep:*), Bash(git merge-base:*), Bash(git rev-parse:*), Bash(git symbolic-ref:*), Bash(git remote show:*), Bash(git range-diff:*), Bash(git status:*), Bash(git ls-files:*), Read, Grep, Glob
 ---
 
@@ -22,9 +21,11 @@ have verified. Each one gets a concrete scenario and a fix the author can act
 on. A good review has no false alarms and does not bury its one real blocker
 under twenty nits.
 
-The target is `$ARGUMENTS`. If that is empty, take the PR number, URL, branch,
-or range from the user's message. Only when none is given, review the current
-branch, including uncommitted and untracked changes.
+The target is the skill's arguments, what the user passed when invoking it
+(in Claude Code, typed arguments appear after ARGUMENTS: at the end of this skill).
+If there are none, take the PR number, URL, branch, or range from the user's
+message. Only when none is given, review the current branch, including
+uncommitted and untracked changes.
 
 ## Workflow
 
@@ -116,9 +117,9 @@ Always diff against the merge base (see the range row in step 1). Remove any
 worktree you created when done (`git worktree remove "$SCRATCH"`). For a quick
 look at a small PR, `gh pr diff 123` is enough.
 
-The Read, Grep, and Glob tools see the user's checkout, which is usually not
-the PR. To read or search the PR, use `git show REV:path`, `git grep` with a
-revision, or the scratch worktree.
+File read and search tools (Read, Grep, and Glob in Claude Code) see the
+user's checkout, which is usually not the PR. To read or search the PR, use
+`git show REV:path`, `git grep` with a revision, or the scratch worktree.
 
 <!-- shared:trust-gate v2 -->
 **Trust gate: check the author before running anything from the target.** Tests, builds, package scripts, dependency installs, migrations, and benchmarks all execute code the author wrote, on a machine that holds the user's tokens, SSH keys, and cloud credentials. This is why CI withholds secrets from fork PRs. For a PR, check:
@@ -310,9 +311,11 @@ head-side line numbers inside a diff hunk; anything else goes in the review
 body.
 
 The skill's pre-approved tools (`allowed-tools`) are limited to reads and
-fetches on purpose. Posting (`gh api`, `gh pr review`, `glab`),
-`gh pr checkout`, worktrees, `git restore`, and running tests still ask for
-permission.
+fetches on purpose. In Claude Code, posting (`gh api`, `gh pr review`,
+`glab`), `gh pr checkout`, worktrees, `git restore`, and running tests still
+ask for permission. Other agents may run them without asking, so in any agent
+the rules here decide: post only as this step says, fetch as step 3 says, and
+run code only when the trust gate allows it.
 
 ## Severity, verdict, and finding format
 
@@ -436,8 +439,10 @@ depth now) or list it under follow-ups. Don't half-do it here.
 - `implementation:verify-before-done`: after fixes land, to prove the build
   and tests pass.
 
-If a skill named here isn't installed, give the short version inline and list
-the deeper pass as a follow-up.
+Skills are named here as `plugin:skill`; an agent that lists skills by bare
+name knows each one by the part after the colon (`review-suite:pr-review` is
+`pr-review`). If a skill named here isn't installed, give the short version
+inline and list the deeper pass as a follow-up.
 
 ## Reference files
 

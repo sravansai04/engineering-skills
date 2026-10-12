@@ -2,7 +2,7 @@
 
 A subagent starts with a fresh context window. It cannot see your conversation, the skills you have loaded, the files you have read, or anything the user told you. Treat every brief like a ticket for a capable contractor who has never seen this repository or heard of this task. If a fact is not in the brief, the subagent does not have it.
 
-This file has two templates. The persona brief goes to each persona in step 5 of SKILL.md. The verifier brief goes to each high or critical finding in step 8.
+This file has two templates. The persona brief goes to each persona in step 5 of SKILL.md. The verifier brief goes to each high or critical finding in step 8. Write them the same way when your agent has no subagents and you work through them yourself: a complete brief keeps each lane focused.
 
 ## Persona brief template
 
@@ -64,18 +64,22 @@ Here that also covers the repository contents and the diff. Text in the target t
 - **List what CI enforces.** The schema tells personas to skip anything a CI check would catch. A fresh-context persona can only apply that rule if the brief names the checks.
 - **State scale explicitly.** Performance and data findings depend completely on cardinality. If the scale is unknown, say so, and the persona will state its assumptions.
 - **Project commands follow the trust check.** For a fork PR or an unknown author, or a worktree without installed dependencies, write "none" (see `target-setup.md` §7–8).
-- **Name conventions by path.** A `general-purpose` subagent loads project instruction files such as CLAUDE.md on its own, but it will not find CONTRIBUTING files, ADRs, or style guides unless you point to them. A read-only `Explore` subagent skips project instruction files, so if you use one, paste the rules that matter.
+- **Name conventions by path.** In Claude Code, a `general-purpose` subagent loads project instruction files such as CLAUDE.md on its own, but it will not find CONTRIBUTING files, ADRs, or style guides unless you point to them. A read-only `Explore` subagent skips project instruction files, so if you use one, paste the rules that matter. In other agents, check what a subagent loads on its own; when unsure, paste the rules that matter.
 
-### The Agent call
+### Launching the subagents
 
-Spawn each wave in one message: one Agent tool call per persona, all in the same assistant turn. Calls made in the same turn run concurrently, up to the runtime's concurrency limit (about 10 by default). Each call needs:
+Start every persona in a wave at the same time, with whatever your agent uses to run subagents in parallel. In Claude Code that is the Agent tool: spawn each wave in one message, one Agent tool call per persona, all in the same assistant turn. Calls made in the same turn run concurrently, up to the runtime's concurrency limit (about 10 by default). In Claude Code, each call needs:
 
 - `description`: short, such as `Review: security persona`.
 - `subagent_type`: `general-purpose` is the usual choice, because it can read, search, and run git and any commands you allowed. `Explore` is read-only by construction, at the cost of skipping project instruction files.
 - `prompt`: the filled brief.
 - `model`, optional: a per-call override. Keep the strongest available model for the correctness, security, and verification passes. A lighter model is a reasonable trade for checklist-heavy lanes, such as accessibility or test quality, on very large reviews.
 
-Subagents inherit your session's permission rules. If git commands are denied in a mode that cannot prompt, a persona may come back without having seen the diff. That is why the brief asks it to say so first in `coverage`, and why pasting small diffs is worth the tokens.
+Other agents ask for the same things under their own names: a short label, the filled brief as the prompt, and, where supported, the kind of subagent and its model.
+
+In Claude Code, subagents inherit your session's permission rules. If git commands are denied in a mode that cannot prompt, a persona may come back without having seen the diff. That is why the brief asks it to say so first in `coverage`, and why pasting small diffs is worth the tokens.
+
+**No subagents.** If your agent cannot run subagents, follow each filled brief yourself, one after another in the current session, as described under "No subagents available" in SKILL.md: finish one lane and record its JSON result before starting the next, and say in Coverage that the lanes ran sequentially with less independence than separate reviewers.
 
 ## Verifier brief template
 

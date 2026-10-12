@@ -25,7 +25,7 @@ Firefox on other platforms tab to everything by default.
 Start with leads from the scripted walk (run it from the project root so Playwright resolves),
 then do it by hand:
 
-`${CLAUDE_SKILL_DIR}` in these commands is not a shell variable: replace it with this skill's directory, the path SKILL.md shows for `scripts/`, and keep the quotes.
+`${CLAUDE_SKILL_DIR}` in these commands is not a shell variable: replace it with this skill's directory, the folder that contains SKILL.md (in Claude Code, the path SKILL.md shows for `scripts/`), and keep the quotes.
 
 ```bash
 node "${CLAUDE_SKILL_DIR}/scripts/keyboard-walk.mjs" http://localhost:3000/checkout --screenshot focus-order.png
@@ -204,7 +204,7 @@ visited/error states, placeholder text (it is not exempt), "disabled-looking" co
 actually enabled, and all non-text indicators: input borders, checkbox/radio outlines, toggle
 states, focus rings, meaningful icons, chart lines and segments (1.4.11, 3:1).
 
-`${CLAUDE_SKILL_DIR}` in these commands is not a shell variable: replace it with this skill's directory, the path SKILL.md shows for `scripts/`, and keep the quotes.
+`${CLAUDE_SKILL_DIR}` in these commands is not a shell variable: replace it with this skill's directory, the folder that contains SKILL.md (in Claude Code, the path SKILL.md shows for `scripts/`), and keep the quotes.
 
 ```bash
 node "${CLAUDE_SKILL_DIR}/scripts/contrast.mjs" '#6b7280' '#ffffff'                 # text, 4.5:1 target
