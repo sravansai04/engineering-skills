@@ -64,8 +64,6 @@ Fill this in for step 9. Put it in the chat by default. Only write it to a file 
 
 ## Choosing the verdict
 
-| Verdict | When |
-|---|---|
 Use the verdict ladder in `finding-schema.md`, the same one every review skill uses. A Confirmed or Likely finding counts; a refuted one doesn't, and neither do pre-existing issues or hardening notes. With only medium findings, list them as follow-ups. For Merge, still include Coverage so the reader knows what "no issues" covered.
 
 ## Style rules
