@@ -8,7 +8,7 @@
       "files": [],
       "expectations": [
         "Records explicit base and head commit SHAs before launching personas",
-        "Launches all persona subagents in one assistant message rather than sequentially",
+        "When subagents are available (as in Claude Code), launches all persona subagents in one assistant message rather than sequentially",
         "Each persona brief contains the repository path, the pinned SHAs or diff command, the change intent, the persona text, and the finding schema",
         "Includes the ux-accessibility persona because UI files changed, and the data-database persona because a migration changed",
         "Runs a refutation-style verification on every high or critical finding before reporting it",
@@ -85,6 +85,20 @@
         "Every persona and verifier brief says no project commands may be run",
         "Does not run the project's tests, build, or type checker",
         "Coverage states that nothing from the PR was executed"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "Subagents aren't available in this session, my agent can't launch them. Can you still do the full multi-angle review of my branch? It adds a POST /refunds handler, a migration that creates a refunds table, and a retry wrapper around the payment client.",
+      "expected_output": "The agent follows the skill's \"No subagents available\" path: it pins the base and head SHAs, picks personas from the scope signals, and works through the same persona briefs itself, one lane at a time in the current session, recording each lane's findings before starting the next. It verifies every high or critical finding by re-reading the code from scratch, ranks with the same finding schema and verdict ladder, and states in Coverage that the lanes ran sequentially with less independence than separate reviewers.",
+      "files": [],
+      "expectations": [
+        "Does not try to launch subagents; works through the persona briefs one after another in the current session",
+        "Records explicit base and head commit SHAs and picks personas from the change's signals (at least security, data-database and reliability-operability for this change)",
+        "Finishes and records each persona lane's findings before starting the next lane",
+        "Verifies every high or critical finding by re-reading the code from scratch before reporting it",
+        "Uses the same finding schema and verdict ladder as a parallel run, and the report leads with a verdict line",
+        "The Coverage section states that the lanes ran sequentially and that the reviews were less independent than separate reviewers"
       ]
     }
   ]
