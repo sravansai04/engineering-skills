@@ -8,6 +8,11 @@ Each plugin's version lives in its `plugin.json` and its marketplace entry, and 
 
 ## [Unreleased]
 
+### Added
+
+- `skill-dev` 1.0.1: `create-skill`'s description now also covers checking whether a skill is worth adding (its overlap step) and trimming a skill's description. Its trigger evals pass 24/24, up from 23/24, with no regressions against sibling skills.
+- `review-suite` 1.0.1: `parallel-review` has an eval for agents that cannot launch subagents (lanes run one after another, verification still re-reads the code, Coverage says the run was sequential), and its first eval's one-message expectation now applies only when subagents are available.
+
 ## [1.0.0] - 2026-10-12
 
 First public release: six plugins with 28 skills, all at plugin version 1.0.0. Every skill is a standard [Agent Skills](https://agentskills.io) skill, so besides the Claude Code plugin marketplace it also loads in OpenCode, Codex, Cursor, Gemini CLI, GitHub Copilot and other tools that support the standard (`npx skills add sravansai04/engineering-skills`; see [docs/install.md](docs/install.md)).

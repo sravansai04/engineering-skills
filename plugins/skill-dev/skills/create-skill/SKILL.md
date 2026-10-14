@@ -1,13 +1,12 @@
 ---
 name: create-skill
 description: >-
-  Creates or fixes an agent skill (SKILL.md) for Claude Code or any Agent
-  Skills tool, measuring triggering in fresh sessions and output against a
-  no-skill baseline before it ships. Use for "turn this workflow into a skill",
-  "add a skill to this marketplace", "my skill never triggers", "this skill
-  fires on everything", or "split this huge SKILL.md". Not for product features
-  (brainstorm-spec, build-feature), skill-syntax questions (docs-lookup), PR
-  text (pr-description), or hooks and CLAUDE.md.
+  Creates or fixes an agent skill (SKILL.md) for Claude Code or any Agent Skills tool, checking
+  overlap and testing it against a no-skill baseline. Use for "turn this into a skill", "is a skill
+  for X worth adding", "add a skill to this marketplace", "my skill never triggers", "this skill fires
+  on everything", or "split a SKILL.md or trim its description". Not for product features
+  (brainstorm-spec, build-feature), syntax questions (docs-lookup), PR text (pr-description), or hooks
+  and CLAUDE.md.
 allowed-tools: Bash(git status:*), Bash(git rev-parse:*), Bash(git ls-files:*), Bash(git diff:*), Bash(git log:*), Bash(python3 -I ${CLAUDE_SKILL_DIR}/scripts/check_skill.py:*), Bash(python3 -I "${CLAUDE_SKILL_DIR}/scripts/check_skill.py":*), Read, Grep, Glob
 compatibility: The bundled checkers need Python 3.8 or later (standard library only); the trigger checker also runs the claude CLI.
 ---

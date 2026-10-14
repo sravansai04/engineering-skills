@@ -25,6 +25,8 @@ claude plugin install implementation@engineering-skills   # also: review-suite d
 npx skills add sravansai04/engineering-skills
 ```
 
+**Get fixes automatically:** Claude Code doesn't auto-update third-party marketplaces, so turn it on once: `/plugin` → **Marketplaces** → `engineering-skills` → **Enable auto-update**. With `npx skills`, run `npx skills update` now and then.
+
 On a 200k-context model, install only the plugins you use or [raise the skill listing budget](docs/install.md#skill-listing-budget) first. Team setup, updates, copying single skills, ChatGPT and optional MCP servers are in [docs/install.md](docs/install.md).
 
 ## Skills
@@ -87,7 +89,7 @@ Describe the task and the matching skill loads on its own, or run one directly: 
 
 | Skill | Use it when | Try |
 |---|---|---|
-| `create-skill` | You want a new skill, or an existing one fixed, measured before it ships | "Turn my Terraform-plan review prompt into a proper skill." |
+| `create-skill` | You want a new skill (or to know if one is worth adding), or an existing one fixed | "Turn my Terraform-plan review prompt into a proper skill." |
 
 ### How they fit together
 
